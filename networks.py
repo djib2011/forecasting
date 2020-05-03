@@ -1,0 +1,44 @@
+import tensorflow as tf
+
+
+def bidirectional_ae_2_layer(hparams, metrics):
+    inp = tf.keras.layers.Input(shape=(hparams['input_seq_length'], 1))
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True, activation='relu'))(inp)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(16, return_sequences=True, activation='relu'))(x)
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.layers.Dense(hparams['bottleneck_size'])(x)
+    if hparams['bottleneck_activation'] == 'relu':
+        x = tf.keras.layers.ReLU()(x)
+    elif hparams['bottleneck_activation'] == 'leaky':
+        x = tf.keras.layers.LeakyReLU()(x)
+    x = tf.keras.layers.Dense(16 * 2 * hparams['output_seq_length'])(x)
+    x = tf.keras.layers.Reshape((hparams['output_seq_length'], 16*2))(x)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(16, return_sequences=True, activation='relu'))(x)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True, activation='relu'))(x)
+    out = tf.keras.layers.Dense(1)(x)
+    model = tf.keras.models.Model(inp, out)
+    model.compile(loss=hparams['loss_function'], optimizer='adam', metrics=metrics)
+    return model
+
+
+def unidirectional_ae_2_layer(hparams, metrics):
+    inp = tf.keras.layers.Input(shape=(hparams['input_seq_length'], 1))
+    x = tf.keras.layers.LSTM(64, return_sequences=True, activation='relu')(inp)
+    x = tf.keras.layers.LSTM(16, return_sequences=True, activation='relu')(x)
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.layers.Dense(hparams['bottleneck_size'])(x)
+    if hparams['bottleneck_activation'] == 'relu':
+        x = tf.keras.layers.ReLU()(x)
+    elif hparams['bottleneck_activation'] == 'leaky':
+        x = tf.keras.layers.LeakyReLU()(x)
+    x = tf.keras.layers.Dense(16 * 2 * hparams['output_seq_length'])(x)
+    x = tf.keras.layers.Reshape((hparams['output_seq_length'], 16 * 2))(x)
+    x = tf.keras.layers.LSTM(16, return_sequences=True, activation='relu')(x)
+    x = tf.keras.layers.LSTM(64, return_sequences=True, activation='relu')(x)
+    out = tf.keras.layers.Dense(1)(x)
+
+    model = tf.keras.models.Model(inp, out)
+
+    model.compile(loss=hparams['loss_function'], optimizer='adam', metrics=metrics)
+
+    return model

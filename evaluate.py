@@ -10,10 +10,14 @@ import metrics
 
 target_dir = Path('reports')
 
+df = None
+
 if (target_dir / 'result_df.csv').exists():
-    if len(sys.argv) > 1:
-        if sys.argv[1] != '--fresh':
-            df = pd.read_csv(str(target_dir / 'result_df.csv'))
+    df = pd.read_csv(str(target_dir / 'result_df.csv'))
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == '--fresh':
+        df = None
 
 np.seterr(all='ignore')
 
@@ -127,9 +131,9 @@ for inp in num_inputs:
     curr_trial_list = [t for t in trials if t.name[4:6] == inp]
     results = evaluate_models(curr_trial_list, X_test, y_test)
 
-    try:
+    if df:
         df = pd.concat([df, create_results_df(results)])
-    except NameError:
+    else:
         df = create_results_df(results)
 
 df.to_csv(str(target_dir / 'result_df.csv'), index=False)

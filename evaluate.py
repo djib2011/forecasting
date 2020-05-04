@@ -99,17 +99,14 @@ test = pd.read_csv(test_path).drop('V1', axis=1)
 # Read experiments
 p = Path('results').absolute()
 
-trials = list(p.glob('*'))
-trial_names = [t.name for t in trials]
-
-
-num_inputs = np.unique([t[4:6] for t in trial_names if not t.isdigit()])
+num_inputs = np.unique([t.name[4:6] for t in p.glob('*') if not t.name.isdigit()])
 
 for inp in num_inputs:
     X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train.iterrows()])
     y_test = test.values
 
-    results = evaluate_models(trials, X_test, y_test)
+    curr_trial_list = [t for t in trials if t[4:6] == inp]
+    results = evaluate_models(curr_trial_list, X_test, y_test)
 
     try:
         pd.concat([df, create_results_df(results)])

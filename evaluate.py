@@ -7,6 +7,7 @@ import tensorflow as tf
 
 import metrics
 
+np.seterr(all='ignore')
 
 def get_last_N(series, N=18):
     ser_N = series.dropna().iloc[-N:].values
@@ -29,6 +30,7 @@ def get_predictions(model, X):
 
     x = X[(i + 1) * 256:]
     mn, mx = x.min(axis=1).reshape(-1, 1), x.max(axis=1).reshape(-1, 1)
+
     x_sc = (x - mn) / (mx - mn)
     pred = model(x_sc[..., np.newaxis])
     preds.append(pred[..., 0] * (mx - mn) + mn)
@@ -56,51 +58,62 @@ def create_results_df(results, ensemble=False):
 
     return df
 
+
+def evaluate_models(trials, x, y):
+
+    trial_names = [t.name for t in trials]
+
+    results = {'smape': {k: [] for k in trial_names},
+               'mase': {k: [] for k in trial_names}}
+
+    # Evaluate all models
+    for trial in tqdm(trials):
+        model_dir = str(trial / 'best_weights.h5')
+
+        smape = metrics.build_smape(overlap=6)
+        mase_estimate = metrics.build_mase(overlap=6)
+        owa_estimate = metrics.build_owa(overlap=6)
+        reconstruction_loss = metrics.build_reconstruction_loss(overlap=6)
+
+        model = tf.keras.models.load_model(model_dir, custom_objects={'SMAPE': smape,
+                                                                      'MASE_estimate': mase_estimate,
+                                                                      'OWA_estimate': owa_estimate,
+                                                                      'reconstruction_loss': reconstruction_loss})
+
+        preds = get_predictions(model, x)
+
+        tf.keras.backend.clear_session()
+
+        results['smape'][trial.name].append(np.nanmean(metrics.SMAPE(y, preds[:, 6:])))
+        results['mase'][trial.name].append(np.nanmean(metrics.MASE(x, y, preds[:, 6:])))
+
+    return results
+
 # Read test data
-train_path = Path('../data/Yearly-train.csv')
-test_path = Path('../data/Yearly-test.csv')
+train_path = Path('data/Yearly-train.csv')
+test_path = Path('data/Yearly-test.csv')
 
 train = pd.read_csv(train_path).drop('V1', axis=1)
 test = pd.read_csv(test_path).drop('V1', axis=1)
 
-# Convert data to np.arrays
-X_test = np.array([get_last_N(ser[1]) for ser in train.iterrows()])
-y_test = test.values
-
 # Read experiments
-p = Path('../results').absolute()
+p = Path('results').absolute()
 
 trials = list(p.glob('*'))
 trial_names = [t.name for t in trials]
 
-results = {'smape': {k: [] for k in trial_names},
-           'mase': {k: [] for k in trial_names}}
 
+num_inputs = np.unique([t[4:6] for t in trial_names if not t.isdigit()])
 
-# Evaluate all models
-for trial in tqdm(trials):
-    model_dir = str(trial / 'best_weights.h5')
+for inp in num_inputs:
+    X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train.iterrows()])
+    y_test = test.values
 
-    mape = metrics.build_mape(overlap=6)
-    smape = metrics.build_smape(overlap=6)
-    mase_estimate = metrics.build_mase(overlap=6)
-    owa_estimate = metrics.build_owa(overlap=6)
-    reconstruction_loss = metrics.build_reconstruction_loss(overlap=6)
+    results = evaluate_models(trials, X_test, y_test)
 
-    model = tf.keras.models.load_model(model_dir, custom_objects={'SMAPE': smape,
-                                                                  'MASE_estimate': mase_estimate,
-                                                                  'OWA_estimate': owa_estimate,
-                                                                  'reconstruction_loss': reconstruction_loss})
+    try:
+        pd.concat([df, create_results_df(results)])
+    except NameError:
+        df = create_results_df(results)
 
-    preds = get_predictions(model, X_test)
-
-    tf.keras.backend.clear_session()
-
-    results['smape'][trial.name].append(np.nanmean(metrics.SMAPE(y_test, preds[:, 6:])))
-    results['mase'][trial.name].append(np.nanmean(metrics.MASE(X_test, y_test, preds[:, 6:])))
-
-
-# Create DataFrame with results and store data
-df = create_results_df(results)
-
-df.to_csv('reports/result_df.csv', index=False)
+# df.to_csv('reports/result_df.csv', index=False)

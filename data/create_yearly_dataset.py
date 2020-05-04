@@ -33,9 +33,9 @@ window = inp_len + 6
 def split_series(ser):
     x = []
     y = []
-    for i in range(ser.notna().sum() - window +1):
-        x.append(ser[i:i+window-overlap])
-        y.append(ser[i+window-overlap:i+window])
+    for i in range(ser.notna().sum() - window + 1):
+        x.append(ser[i:i+window-6])
+        y.append(ser[i+window-6-overlap:i+window])
     return np.array(x), np.array(y)
 
 

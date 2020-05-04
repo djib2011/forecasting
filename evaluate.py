@@ -99,13 +99,14 @@ test = pd.read_csv(test_path).drop('V1', axis=1)
 # Read experiments
 p = Path('results').absolute()
 
-num_inputs = np.unique([t.name[4:6] for t in p.glob('*') if not t.name.isdigit()])
+trials = list(p.glob('*'))
+num_inputs = np.unique([t.name[4:6] for t in trials if not t.name.isdigit()])
 
 for inp in num_inputs:
     X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train.iterrows()])
     y_test = test.values
 
-    curr_trial_list = [t for t in trials if t[4:6] == inp]
+    curr_trial_list = [t for t in trials if t.name[4:6] == inp]
     results = evaluate_models(curr_trial_list, X_test, y_test)
 
     try:

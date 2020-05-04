@@ -6,29 +6,36 @@ from networks import bidirectional_ae_2_layer, unidirectional_ae_2_layer
 import os
 import sys
 
+
+inp_length = 12
+overlap = 6
+
 if len(sys.argv) > 1:
     inp_length = int(sys.argv[1])
-else:
-    inp_length = 12
+
+if len(sys.argv) > 2:
+    overlap = int(sys.argv[2])
+
+out_length = overlap + 6
 
 # load datasets
-train_set = seq2seq_generator('../data/yearly_{}_train.pkl'.format(inp_length + 6))
-test_set = seq2seq_generator('../data/yearly_{}_validation.pkl'.format(inp_length + 6))
+train_set = seq2seq_generator('data/yearly_{}_{}_train.pkl'.format(inp_length + 6, overlap))
+test_set = seq2seq_generator('data/yearly_{}_{}_validation.pkl'.format(inp_length + 6, overlap))
 
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
-output_seq_length = hp.HParam('output_seq_length', hp.Discrete([12]))
+output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([25, 50, 100, 200, 250]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu', 'leaky', 'tanh']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mse', 'mae']))
 direction = hp.HParam('direction', hp.Discrete(['uni', 'bi']))
 
 # define metrics
-mape = metrics.build_mape(overlap=6)
-smape = metrics.build_smape(overlap=6)
-mase = metrics.build_mase(overlap=6)
-owa_estimate = metrics.build_owa(overlap=6)
-reconstruction_loss = metrics.build_reconstruction_loss(overlap=6)
+mape = metrics.build_mape(overlap=overlap)
+smape = metrics.build_smape(overlap=overlap)
+mase = metrics.build_mase(overlap=overlap)
+owa_estimate = metrics.build_owa(overlap=overlap)
+reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
 metric_names = ['MSE', 'MAE', 'MAPE', 'sMAPE', 'MASE', 'OWA (estimate)', 'Reconstruction Loss']
 metrics = ['mse', 'mae', mape, smape, mase, owa_estimate, reconstruction_loss]
 
@@ -86,5 +93,5 @@ for inp_seq in input_seq_length.domain.values:
                             print('-' * 30)
                             print('Starting trial {}: {}'.format(i, run_name))
                             print(hparams)
-
+                            break
                             run(run_name, model_generator=model_mapping[direct], hparams=hparams, epochs=5)

@@ -19,16 +19,16 @@ if len(sys.argv) > 2:
 out_length = overlap + 6
 
 # load datasets
-train_set = seq2seq_generator('data/yearly_{}_{}_train.pkl'.format(inp_length + 6, overlap))
-test_set = seq2seq_generator('data/yearly_{}_{}_validation.pkl'.format(inp_length + 6, overlap))
+train_set = seq2seq_generator('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap)
+test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap)
 
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([25, 50, 100, 200, 250]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu', 'leaky', 'tanh']))
-loss_function = hp.HParam('loss_function', hp.Discrete(['mse', 'mae']))
-direction = hp.HParam('direction', hp.Discrete(['uni', 'bi']))
+loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
+direction = hp.HParam('direction', hp.Discrete(['bi']))
 
 # define metrics
 mape = metrics.build_mape(overlap=overlap)
@@ -93,5 +93,5 @@ for inp_seq in input_seq_length.domain.values:
                             print('-' * 30)
                             print('Starting trial {}: {}'.format(i, run_name))
                             print(hparams)
-                            break
                             run(run_name, model_generator=model_mapping[direct], hparams=hparams, epochs=5)
+

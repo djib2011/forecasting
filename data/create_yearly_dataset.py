@@ -1,19 +1,16 @@
 from pathlib import Path
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import pickle as pkl
-import tensorflow as tf
 import sys
 from sklearn.preprocessing import MinMaxScaler
 
 import warnings
 warnings.filterwarnings('once')
 
-data_path = Path('../../M4-methods/Dataset/Train/Yearly-train.csv')
+data_path = Path('Yearly-train.csv')
 
 data = pd.read_csv(data_path)
 data = data.drop('V1', axis=1)
@@ -35,7 +32,7 @@ def split_series(ser):
     y = []
     for i in range(ser.notna().sum() - window + 1):
         x.append(ser[i:i+window-6])
-        y.append(ser[i+window-6-overlap:i+window])
+        y.append(ser[i+window-6:i+window])
     return np.array(x), np.array(y)
 
 
@@ -63,14 +60,13 @@ sc_test = MinMaxScaler()
 X_test = sc_train.fit_transform(X_test.T).T
 y_test = sc_train.transform(y_test.T).T
 
-pkl.dump(sc_train, open('yearly_{}_{}_scales_train.pkl'.format(window, overlap), 'wb'))
-pkl.dump(sc_test, open('yearly_{}_{}_scales_test.pkl'.format(window, overlap), 'wb'))
-pkl.dump((X_train, y_train), open('yearly_{}_{}_train.pkl'.format(window, overlap), 'wb'))
-pkl.dump((X_test, y_test), open('yearly_{}_{}_validation.pkl'.format(window, overlap), 'wb'))
+pkl.dump(sc_train, open('yearly_{}_scales_train.pkl'.format(window), 'wb'))
+pkl.dump(sc_test, open('yearly_{}_scales_test.pkl'.format(window), 'wb'))
+pkl.dump((X_train, y_train), open('yearly_{}_train.pkl'.format(window), 'wb'))
+pkl.dump((X_test, y_test), open('yearly_{}_validation.pkl'.format(window), 'wb'))
 
 print('Saved files:')
-print('yearly_{}_{}_scales_train.pkl'.format(window, overlap))
-print('yearly_{}_{}_scales_test.pkl'.format(window, overlap))
-print('yearly_{}_{}_train.pkl'.format(window, overlap))
-print('yearly_{}_{}_validation.pkl'.format(window, overlap))
-
+print('yearly_{}_scales_train.pkl'.format(window))
+print('yearly_{}_scales_test.pkl'.format(window))
+print('yearly_{}_train.pkl'.format(window))
+print('yearly_{}_validation.pkl'.format(window))

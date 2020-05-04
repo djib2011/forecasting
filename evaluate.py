@@ -4,10 +4,19 @@ import pandas as pd
 from tqdm import tqdm
 import pickle as pkl
 import tensorflow as tf
+import sys
 
 import metrics
 
+target_dir = Path('reports')
+
+if (target_dir / 'result_df.csv').exists():
+    if len(sys.argv) > 1:
+        if sys.argv[1] != '--fresh':
+            df = pd.read_csv(str(target_dir / 'result_df.csv'))
+
 np.seterr(all='ignore')
+
 
 def get_last_N(series, N=18):
     ser_N = series.dropna().iloc[-N:].values
@@ -89,6 +98,7 @@ def evaluate_models(trials, x, y):
 
     return results
 
+
 # Read test data
 train_path = Path('data/Yearly-train.csv')
 test_path = Path('data/Yearly-test.csv')
@@ -99,8 +109,16 @@ test = pd.read_csv(test_path).drop('V1', axis=1)
 # Read experiments
 p = Path('results').absolute()
 
-trials = list(p.glob('*'))
+if (target_dir / 'tracked.pkl').exists():
+    with open(str(target_dir / 'tracked.pkl'), 'rb') as f:
+        tracked_trials = pkl.load(f)
+else:
+    tracked_trials = []
+
+trials = [t for t in p.glob('*') if t not in tracked_trials]
 num_inputs = np.unique([t.name[4:6] for t in trials if not t.name.isdigit()])
+
+tracked_trials.extend(trials)
 
 for inp in num_inputs:
     X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train.iterrows()])
@@ -110,8 +128,11 @@ for inp in num_inputs:
     results = evaluate_models(curr_trial_list, X_test, y_test)
 
     try:
-        pd.concat([df, create_results_df(results)])
+        df = pd.concat([df, create_results_df(results)])
     except NameError:
         df = create_results_df(results)
 
-# df.to_csv('reports/result_df.csv', index=False)
+df.to_csv(str(target_dir / 'result_df.csv'), index=False)
+
+with open(str(target_dir / 'tracked.pkl'), 'wb') as f:
+    pkl.dump(tracked_trials, f)

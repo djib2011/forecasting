@@ -8,6 +8,7 @@ import sys
 from sklearn.preprocessing import MinMaxScaler
 
 import warnings
+
 warnings.filterwarnings('once')
 
 data_path = Path('Yearly-train.csv')
@@ -31,14 +32,14 @@ def split_series(ser):
     x = []
     y = []
     for i in range(ser.notna().sum() - window + 1):
-        x.append(ser[i:i+window-6])
-        y.append(ser[i+window-6:i+window])
+        x.append(ser[i:i + window - 6])
+        y.append(ser[i + window - 6:i + window])
     return np.array(x), np.array(y)
 
 
 for s in tqdm(data.values):
     ser = pd.Series(s)
-    if ser.notna().sum() <= window-1:
+    if ser.notna().sum() <= window - 1:
         continue
     x, y = split_series(ser)
     try:
@@ -47,8 +48,7 @@ for s in tqdm(data.values):
     except NameError:
         X = x.copy()
         Y = y.copy()
-        
-        
+
 X_train, X_test, y_train, y_test = train_test_split(X, Y)
 print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 

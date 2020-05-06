@@ -97,8 +97,8 @@ def evaluate_models(trials, x, y):
 
         tf.keras.backend.clear_session()
 
-        results['smape'][trial.name].append(np.nanmean(metrics.SMAPE(y, preds[:, 6:])))
-        results['mase'][trial.name].append(np.nanmean(metrics.MASE(x, y, preds[:, 6:])))
+        results['smape'][trial.name].append(np.nanmean(metrics.SMAPE(y, preds[:, -6:])))
+        results['mase'][trial.name].append(np.nanmean(metrics.MASE(x, y, preds[:, -6:])))
 
     return results
 
@@ -131,7 +131,7 @@ for inp in num_inputs:
     curr_trial_list = [t for t in trials if t.name[4:6] == inp]
     results = evaluate_models(curr_trial_list, X_test, y_test)
 
-    if df:
+    if isinstance(df, pd.DataFrame):
         df = pd.concat([df, create_results_df(results)])
     else:
         df = create_results_df(results)

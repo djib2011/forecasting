@@ -51,7 +51,7 @@ def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=2
                          hp.KerasCallback('logs', hparams),
                          tf.keras.callbacks.ModelCheckpoint('results/' + str(run_name) + '/best_weights.h5',
                                                             save_best_only=True)])
-    return model.evaluate(test_set, steps=84112//batch_size+1)
+    return model.evaluate(test_set, steps=len(test_set)//batch_size+1)
 
 
 def run(run_name, model_generator, hparams, epochs=10, batch_size=256):

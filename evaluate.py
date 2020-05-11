@@ -5,6 +5,7 @@ from tqdm import tqdm
 import pickle as pkl
 import tensorflow as tf
 import sys
+import os
 
 import metrics
 
@@ -22,10 +23,18 @@ if len(sys.argv) > 1:
 np.seterr(all='ignore')
 
 
+def check_for_errors(trials, fix=True):
+    if fix:
+        errors = [trial for trial in trials if not (trial / 'best_weights.h5').exists()]
+        for error in errors:
+            os.rmdir(str(error))
+    return [trial for trial in trials if (trial / 'best_weights.h5').exists()]
+
+
 def get_last_N(series, N=18):
     ser_N = series.dropna().iloc[-N:].values
     if len(ser_N) < N:
-        pad = [ser_N[0]] * (18 - len(ser_N))
+        pad = [ser_N[0]] * (N - len(ser_N))
         ser_N = np.r_[pad, ser_N]
     return ser_N
 
@@ -120,6 +129,8 @@ else:
     tracked_trials = []
 
 trials = [t for t in p.glob('*') if t not in tracked_trials]
+trials = check_for_errors(trials, fix=False)
+
 num_inputs = np.unique([t.name[4:6] for t in trials if not t.name.isdigit()])
 
 tracked_trials.extend(trials)

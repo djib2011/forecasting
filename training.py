@@ -31,14 +31,18 @@ loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
 direction = hp.HParam('direction', hp.Discrete(['bi']))
 
 # define metrics
+reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
 mape = metrics.build_mape(overlap=overlap)
 smape = metrics.build_smape(overlap=overlap)
-mase = metrics.build_mase(overlap=overlap)
-owa_estimate = metrics.build_owa(overlap=overlap)
-reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
-metric_names = ['MSE', 'MAE', 'MAPE', 'sMAPE', 'MASE', 'OWA (estimate)', 'Reconstruction Loss']
-metrics = ['mse', 'mae', mape, smape, mase, owa_estimate, reconstruction_loss]
+metric_names = ['MSE', 'MAE', 'MAPE', 'sMAPE', 'Reconstruction Loss', ]
+metrics = ['mse', 'mae', mape, smape, reconstruction_loss]
 
+if overlap:
+    # MASE, OWA can't be estimated without overlap
+    mase = metrics.build_mase(overlap=overlap)
+    owa_estimate = metrics.build_owa(overlap=overlap)
+    metric_names.extend(['MASE', 'OWA (estimate)'])
+    metrics.extend([mase, owa_estimate])
 
 # write model training/testing function
 def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=256):
@@ -93,5 +97,5 @@ for inp_seq in input_seq_length.domain.values:
                             print('-' * 30)
                             print('Starting trial {}: {}'.format(i, run_name))
                             print(hparams)
-                            run(run_name, model_generator=model_mapping[direct], hparams=hparams, epochs=5)
+                            # run(run_name, model_generator=model_mapping[direct], hparams=hparams, epochs=5)
 

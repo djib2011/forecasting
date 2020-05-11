@@ -97,5 +97,5 @@ for inp_seq in input_seq_length.domain.values:
                             print('-' * 30)
                             print('Starting trial {}: {}'.format(i, run_name))
                             print(hparams)
-                            # run(run_name, model_generator=model_mapping[direct], hparams=hparams, epochs=5)
+                            run(run_name, model_generator=model_mapping[direct], hparams=hparams, epochs=5)
 

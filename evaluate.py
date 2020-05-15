@@ -80,8 +80,8 @@ def create_results_df(results, ensemble=False):
                    'LSTM_type'):
         df[column] = df[column].apply(lambda x: x.split('_')[1])
 
-    df['smape'] = [results['smape'][k][0] if results['smape'][k] else np.nan for k in new_keys]
-    df['mase*'] = [results['mase'][k][0] if results['mase'][k] else np.nan for k in new_keys]
+    df['smape'] = [results['smape'][k] if results['smape'][k] else np.nan for k in new_keys]
+    df['mase*'] = [results['mase'][k] if results['mase'][k] else np.nan for k in new_keys]
 
     return df
 
@@ -119,12 +119,8 @@ def evaluate_models(trials, x, y):
 
 def evaluate_model_ensembles(families, x, y):
 
-    family_names = [f.name for f in families]
+    results = {'smape': {}, 'mase': {}}
 
-    results = {'smape': {k: [] for k in family_names + [f.name + str(num) for f in families for num in range(10)]},
-               'mase': {k: [] for k in family_names + [f.name + str(num) for f in families for num in range(10)]}}
-
-    print('entered')
     # Evaluate all models
     for family in families:
 
@@ -154,13 +150,13 @@ def evaluate_model_ensembles(families, x, y):
 
             tf.keras.backend.clear_session()
 
-            results['smape'][Path(trial).name].append(np.nanmean(metrics.SMAPE(y, preds[:, -6:])))
-            results['mase'][Path(trial).name].append(np.nanmean(metrics.MASE(x, y, preds[:, -6:])))
+            results['smape'][Path(trial).name] = np.nanmean(metrics.SMAPE(y, preds[:, -6:]))
+            results['mase'][Path(trial).name] = np.nanmean(metrics.MASE(x, y, preds[:, -6:]))
 
         ensemble_preds = np.median(np.array(family_preds), axis=0)
 
-        results['smape'][family.name].append(np.nanmean(metrics.SMAPE(y, ensemble_preds[:, -6:])))
-        results['mase'][family.name].append(np.nanmean(metrics.MASE(x, y, ensemble_preds[:, -6:])))
+        results['smape'][family.name] = np.nanmean(metrics.SMAPE(y, ensemble_preds[:, -6:]))
+        results['mase'][family.name] = np.nanmean(metrics.MASE(x, y, ensemble_preds[:, -6:]))
 
         return results
 

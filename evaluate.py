@@ -12,12 +12,17 @@ import metrics
 target_dir = Path('reports')
 
 df = None
+ensemble = False
 
 if (target_dir / 'result_df.csv').exists():
     df = pd.read_csv(str(target_dir / 'result_df.csv'))
 
 if len(sys.argv) > 1:
-    if sys.argv[1] == '--fresh':
+    if sys.argv[1] == '--ensemble':
+        ensemble=True
+
+if len(sys.argv) > 2:
+    if sys.argv[2] == '--fresh':
         df = None
 
 np.seterr(all='ignore')
@@ -112,6 +117,54 @@ def evaluate_models(trials, x, y):
     return results
 
 
+def evaluate_model_ensembles(families, x, y):
+
+    family_names = [f.name for f in families]
+
+    results = {'smape': {k: [] for k in family_names + [f.name + str(num) for f in families for num in range(10)]},
+               'mase': {k: [] for k in family_names + [f.name + str(num) for f in families for num in range(10)]}}
+
+    print('entered')
+    # Evaluate all models
+    for family in families:
+
+        print('family', str(family))
+
+        family_preds = []
+
+        for num in range(10):
+
+            print('num:', num)
+
+            trial = str(family) + str(num)
+            model_dir = trial + '/best_weights.h5'
+
+            smape = metrics.build_smape(overlap=6)
+            mase_estimate = metrics.build_mase(overlap=6)
+            owa_estimate = metrics.build_owa(overlap=6)
+            reconstruction_loss = metrics.build_reconstruction_loss(overlap=6)
+
+            model = tf.keras.models.load_model(model_dir, custom_objects={'SMAPE': smape,
+                                                                          'MASE_estimate': mase_estimate,
+                                                                          'OWA_estimate': owa_estimate,
+                                                                          'reconstruction_loss': reconstruction_loss})
+
+            preds = get_predictions(model, x)
+            family_preds.append(preds)
+
+            tf.keras.backend.clear_session()
+
+            results['smape'][Path(trial).name].append(np.nanmean(metrics.SMAPE(y, preds[:, -6:])))
+            results['mase'][Path(trial).name].append(np.nanmean(metrics.MASE(x, y, preds[:, -6:])))
+
+        ensemble_preds = np.median(np.array(family_preds), axis=0)
+
+        results['smape'][family.name].append(np.nanmean(metrics.SMAPE(y, ensemble_preds[:, -6:])))
+        results['mase'][family.name].append(np.nanmean(metrics.MASE(x, y, ensemble_preds[:, -6:])))
+
+        return results
+
+
 # Read test data
 train_path = Path('data/Yearly-train.csv')
 test_path = Path('data/Yearly-test.csv')
@@ -140,7 +193,10 @@ for inp in num_inputs:
     y_test = test.values
 
     curr_trial_list = [t for t in trials if t.name[4:6] == inp]
-    results = evaluate_models(curr_trial_list, X_test, y_test)
+
+    families = list(set([Path(str(c)[:-1]) for c in curr_trial_list]))
+
+    results = evaluate_model_ensembles(families, X_test, y_test)
 
     if isinstance(df, pd.DataFrame):
         df = pd.concat([df, create_results_df(results)])

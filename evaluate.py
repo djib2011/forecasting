@@ -12,17 +12,12 @@ import metrics
 target_dir = Path('reports')
 
 df = None
-ensemble = False
 
 if (target_dir / 'result_df.csv').exists():
     df = pd.read_csv(str(target_dir / 'result_df.csv'))
 
 if len(sys.argv) > 1:
-    if sys.argv[1] == '--ensemble':
-        ensemble=True
-
-if len(sys.argv) > 2:
-    if sys.argv[2] == '--fresh':
+    if sys.argv[1] == '--fresh':
         df = None
 
 np.seterr(all='ignore')
@@ -191,9 +186,6 @@ for inp in num_inputs:
     y_test = test.values
 
     curr_family_list = [f for f in families if f.name[4:6] == inp]
-
-    #families = list(set([Path(str(c)[:-1]) for c in curr_trial_list]))
-    #print(len(families))
 
     results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
 

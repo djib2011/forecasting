@@ -36,6 +36,10 @@ def check_for_errors(trials, fix=True):
     return [trial for trial in trials if (trial / 'best_weights.h5').exists()]
 
 
+def check_families_for_errors(families):
+    return [family for family in families if all([Path(str(family) + str(n)).exists() for n in range(10)])]
+
+
 def get_last_N(series, N=18):
     ser_N = series.dropna().iloc[-N:].values
     if len(ser_N) < N:
@@ -122,15 +126,11 @@ def evaluate_model_ensembles(families, x, y):
     results = {'smape': {}, 'mase': {}}
 
     # Evaluate all models
-    for family in families:
-
-        print('family', str(family))
+    for family in tqdm(families):
 
         family_preds = []
 
         for num in range(10):
-
-            print('num:', num)
 
             trial = str(family) + str(num)
             model_dir = trial + '/best_weights.h5'
@@ -158,7 +158,7 @@ def evaluate_model_ensembles(families, x, y):
         results['smape'][family.name] = np.nanmean(metrics.SMAPE(y, ensemble_preds[:, -6:]))
         results['mase'][family.name] = np.nanmean(metrics.MASE(x, y, ensemble_preds[:, -6:]))
 
-        return results
+    return results
 
 
 # Read test data
@@ -179,20 +179,23 @@ else:
 
 trials = [t for t in p.glob('*') if t not in tracked_trials]
 trials = check_for_errors(trials, fix=False)
+families = list(set([Path(str(t)[:-1]) for t in trials]))
+families = check_families_for_errors(families)
 
-num_inputs = np.unique([t.name[4:6] for t in trials if not t.name.isdigit()])
+num_inputs = np.unique([f.name[4:6] for f in families if not f.name.isdigit()])
 
-tracked_trials.extend(trials)
+tracked_trials.extend(families)
 
 for inp in num_inputs:
     X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train.iterrows()])
     y_test = test.values
 
-    curr_trial_list = [t for t in trials if t.name[4:6] == inp]
+    curr_family_list = [f for f in families if f.name[4:6] == inp]
 
-    families = list(set([Path(str(c)[:-1]) for c in curr_trial_list]))
+    #families = list(set([Path(str(c)[:-1]) for c in curr_trial_list]))
+    #print(len(families))
 
-    results = evaluate_model_ensembles(families, X_test, y_test)
+    results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
 
     if isinstance(df, pd.DataFrame):
         df = pd.concat([df, create_results_df(results)])

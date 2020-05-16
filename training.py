@@ -35,18 +35,18 @@ reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
 mape = metrics.build_mape(overlap=overlap)
 smape = metrics.build_smape(overlap=overlap)
 metric_names = ['MSE', 'MAE', 'MAPE', 'sMAPE', 'Reconstruction Loss', ]
-metrics = ['mse', 'mae', mape, smape, reconstruction_loss]
+metric_functions = ['mse', 'mae', mape, smape, reconstruction_loss]
 
 if overlap:
     # MASE, OWA can't be estimated without overlap
     mase = metrics.build_mase(overlap=overlap)
     owa_estimate = metrics.build_owa(overlap=overlap)
     metric_names.extend(['MASE', 'OWA (estimate)'])
-    metrics.extend([mase, owa_estimate])
+    metric_functions.extend([mase, owa_estimate])
 
 # write model training/testing function
 def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=256):
-    model = model_generator(hparams, metrics)
+    model = model_generator(hparams, metric_functions)
     if not os.path.isdir('results/' + str(run_name)):
         os.makedirs('results/' + str(run_name))
     model.fit(train_set, epochs=epochs, steps_per_epoch=len(train_set)//batch_size+1,

@@ -32,7 +32,7 @@ def check_for_errors(trials, fix=True):
 
 
 def check_families_for_errors(families):
-    return [family for family in families if all([Path(str(family) + str(n)).exists() for n in range(10)])]
+    return [family for family in families if all([(Path(str(family) + str(n)) / 'best_weights.h5').exists() for n in range(10)])]
 
 
 def get_last_N(series, N=18):
@@ -190,7 +190,9 @@ for inp in num_inputs:
     results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
 
     if isinstance(df, pd.DataFrame):
+        print(df.shape)
         df = pd.concat([df, create_results_df(results)])
+        print(df.shape)
     else:
         df = create_results_df(results)
 
@@ -198,3 +200,6 @@ df.to_csv(str(target_dir / 'result_df.csv'), index=False)
 
 with open(str(target_dir / 'tracked.pkl'), 'wb') as f:
     pkl.dump(tracked_trials, f)
+
+print('Done!')
+

@@ -4,28 +4,39 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import pickle as pkl
-import sys
 from sklearn.preprocessing import MinMaxScaler
-
+import argparse
 import warnings
+import os
 
 warnings.filterwarnings('once')
+
+if not os.getcwd().endswith('data'):
+    os.chdir('data')
 
 data_path = Path('Yearly-train.csv')
 
 data = pd.read_csv(data_path)
 data = data.drop('V1', axis=1)
 
-inp_len = 12
-overlap = 6
+# Parse command line arguments
+parser = argparse.ArgumentParser()
 
-if len(sys.argv) > 1:
-    inp_len = int(sys.argv[1])
+parser.add_argument('-i', '--input_len', type=int, default=12, help='Insample length.')
+parser.add_argument('--line', action='store_true', help='Approximate outsample with a linear regression.')
 
-if len(sys.argv) > 2:
-    overlap = int(sys.argv[2])
+args = parser.parse_args()
 
-window = inp_len + 6
+window = args.input_len + 6
+
+if args.line:
+    from sklearn.linear_model import LinearRegression
+
+    lin_reg = LinearRegression()
+
+    def best_line(y):
+        lin_reg.fit(np.arange(len(y))[:, np.newaxis], y[:, np.newaxis])
+        return lin_reg.predict(np.arange(len(y))[:, np.newaxis]).flatten()
 
 
 def split_series(ser):
@@ -33,7 +44,10 @@ def split_series(ser):
     y = []
     for i in range(ser.notna().sum() - window + 1):
         x.append(ser[i:i + window - 6])
-        y.append(ser[i + window - 6:i + window])
+        if args.line:
+            y.append(best_line(ser[i + window - 6:i + window]))
+        else:
+            y.append(ser[i + window - 6:i + window])
     return np.array(x), np.array(y)
 
 
@@ -60,13 +74,26 @@ sc_test = MinMaxScaler()
 X_test = sc_train.fit_transform(X_test.T).T
 y_test = sc_train.transform(y_test.T).T
 
-pkl.dump(sc_train, open('yearly_{}_scales_train.pkl'.format(window), 'wb'))
-pkl.dump(sc_test, open('yearly_{}_scales_test.pkl'.format(window), 'wb'))
-pkl.dump((X_train, y_train), open('yearly_{}_train.pkl'.format(window), 'wb'))
-pkl.dump((X_test, y_test), open('yearly_{}_validation.pkl'.format(window), 'wb'))
+if args.line:
+    pkl.dump(sc_train, open('yearly_{}_scales_train_line.pkl'.format(window), 'wb'))
+    pkl.dump(sc_test, open('yearly_{}_scales_test_line.pkl'.format(window), 'wb'))
+    pkl.dump((X_train, y_train), open('yearly_{}_train_line.pkl'.format(window), 'wb'))
+    pkl.dump((X_test, y_test), open('yearly_{}_validation_line.pkl'.format(window), 'wb'))
 
-print('Saved files:')
-print('yearly_{}_scales_train.pkl'.format(window))
-print('yearly_{}_scales_test.pkl'.format(window))
-print('yearly_{}_train.pkl'.format(window))
-print('yearly_{}_validation.pkl'.format(window))
+    print('Saved files:')
+    print('yearly_{}_scales_train_line.pkl'.format(window))
+    print('yearly_{}_scales_test_line.pkl'.format(window))
+    print('yearly_{}_train_line.pkl'.format(window))
+    print('yearly_{}_validation_line.pkl'.format(window))
+
+else:
+    pkl.dump(sc_train, open('yearly_{}_scales_train.pkl'.format(window), 'wb'))
+    pkl.dump(sc_test, open('yearly_{}_scales_test.pkl'.format(window), 'wb'))
+    pkl.dump((X_train, y_train), open('yearly_{}_train.pkl'.format(window), 'wb'))
+    pkl.dump((X_test, y_test), open('yearly_{}_validation.pkl'.format(window), 'wb'))
+
+    print('Saved files:')
+    print('yearly_{}_scales_train.pkl'.format(window))
+    print('yearly_{}_scales_test.pkl'.format(window))
+    print('yearly_{}_train.pkl'.format(window))
+    print('yearly_{}_validation.pkl'.format(window))

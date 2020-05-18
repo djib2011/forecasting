@@ -5,6 +5,7 @@ from tqdm import tqdm
 import pickle as pkl
 import tensorflow as tf
 import sys
+import argparse
 import os
 
 import metrics
@@ -16,9 +17,16 @@ df = None
 if (target_dir / 'result_df.csv').exists():
     df = pd.read_csv(str(target_dir / 'result_df.csv'))
 
-if len(sys.argv) > 1:
-    if sys.argv[1] == '--fresh':
-        df = None
+
+# Parse command line arguments
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-f', '--fresh', type='store_true', help='Ignore tracked experiments; Evaluate all models from '
+                                                             'scratch.')
+args = parser.parse_args()
+
+if args.fresh:
+    df = None
 
 np.seterr(all='ignore')
 

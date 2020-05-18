@@ -190,9 +190,7 @@ for inp in num_inputs:
     results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
 
     if isinstance(df, pd.DataFrame):
-        print(df.shape)
         df = pd.concat([df, create_results_df(results)])
-        print(df.shape)
     else:
         df = create_results_df(results)
 

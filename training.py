@@ -34,7 +34,7 @@ else:
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
-bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([25, 50, 100, 200, 250]))
+bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([200, 250]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu', 'leaky', 'tanh']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
 direction = hp.HParam('direction', hp.Discrete(['bi']))
@@ -104,7 +104,7 @@ def hyperparam_loop(logs=True, line=False):
                                        'output_seq_length': out_seq,
                                        'loss_function': loss}
 
-                            for i in range(10):
+                            for i in range(30):
                                 run_name = 'inp_{}__out_{}__loss_{}__bksize_{}__bkact_{}__dir_{}__{}'.format(inp_seq, out_seq,
                                                                                                              loss, bneck_size,
                                                                                                              bneck_activation,

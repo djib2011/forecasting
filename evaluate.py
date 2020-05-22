@@ -21,8 +21,9 @@ if (target_dir / 'result_df.csv').exists():
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-f', '--fresh', type='store_true', help='Ignore tracked experiments; Evaluate all models from '
+parser.add_argument('-f', '--fresh', action='store_true', help='Ignore tracked experiments; Evaluate all models from '
                                                              'scratch.')
+parser.add_argument('-c', '--check', action='store_true', help='Print which experiments will be evaluated (i.e. don\'t run actual evaluations.')
 args = parser.parse_args()
 
 if args.fresh:
@@ -39,8 +40,8 @@ def check_for_errors(trials, fix=True):
     return [trial for trial in trials if (trial / 'best_weights.h5').exists()]
 
 
-def check_families_for_errors(families):
-    return [family for family in families if all([(Path(str(family) + str(n)) / 'best_weights.h5').exists() for n in range(10)])]
+def check_families_for_errors(families, num_models):
+    return [(family, num) for family, num in zip(families, num_models) if all([(Path(str(family) + '__' + str(n)) / 'best_weights.h5').exists() for n in range(num)])]
 
 
 def get_last_N(series, N=18):
@@ -129,13 +130,13 @@ def evaluate_model_ensembles(families, x, y):
     results = {'smape': {}, 'mase': {}}
 
     # Evaluate all models
-    for family in tqdm(families):
+    for family, num_models in tqdm(families):
 
         family_preds = []
 
-        for num in range(10):
+        for num in range(num_models):
 
-            trial = str(family) + str(num)
+            trial = str(family) + '__' + str(num)
             model_dir = trial + '/best_weights.h5'
 
             smape = metrics.build_smape(overlap=6)
@@ -164,6 +165,24 @@ def evaluate_model_ensembles(families, x, y):
     return results
 
 
+def run(num_inputs, families, num_models, train_set, test_set):
+    for inp in num_inputs:
+        X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train_set.iterrows()])
+        y_test = test_set.values
+
+        #curr_family_list = [f for f in families if f.name[4:6] == inp]
+        curr_family_list = [(f, m) for f, m in zip(families, num_models) if f.name[4:6] == inp]
+
+        results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
+
+        if isinstance(df, pd.DataFrame):
+            df = pd.concat([df, create_results_df(results)])
+        else:
+            df = create_results_df(results)
+
+    return df
+
+
 # Read test data
 train_path = Path('data/Yearly-train.csv')
 test_path = Path('data/Yearly-test.csv')
@@ -176,36 +195,61 @@ p = Path('results').absolute()
 
 if (target_dir / 'tracked.pkl').exists():
     with open(str(target_dir / 'tracked.pkl'), 'rb') as f:
-        tracked_trials = pkl.load(f)
+        tracked_trials, models_per_trial = pkl.load(f)
 else:
-    tracked_trials = []
+    tracked_trials, models_per_trial = [], []
 
-trials = [t for t in p.glob('*') if t not in tracked_trials]
+
+def filter_tracked(candidate_names, tracked_families, tracked_nums):
+    
+    candidate_families = list(set([Path('__'.join(str(t).split('__')[:-1])) for t in trials]))
+    candidate_models = [len(list(p.glob(f.name + '*'))) for f in candidate_families]
+
+    tracked_dict = dict(zip(tracked_families, tracked_nums))
+    untracked_families, untracked_nums = [], []
+
+    for i in range(len(candidate_families)):
+        if candidate_families[i] in tracked_dict.keys():
+            if tracked_nums[i] == tracked_dict[candidate_families[i]]:
+                continue
+        untracked_families.append(candidate_families[i])
+        untracked_nums.append(candidate_models[i])
+
+    untracked_families, untracked_nums = zip(*check_families_for_errors(untracked_families, untracked_nums))
+
+    return untracked_families, untracked_nums
+
+
+trials = list(p.glob('*'))
 trials = check_for_errors(trials, fix=False)
-families = list(set([Path(str(t)[:-1]) for t in trials]))
-families = check_families_for_errors(families)
+#families = list(set([Path('__'.join(str(t).split('__')[:-1])) for t in trials if t not in tracked_trials]))
+#num_models = [len(list(p.glob(f.name + '*'))) for f in families]
+#families, num_models = zip(*check_families_for_errors(families, num_models))
+
+families, num_models = filter_tracked(trials, tracked_trials, models_per_trial)
 
 num_inputs = np.unique([f.name[4:6] for f in families if not f.name.isdigit()])
 
-tracked_trials.extend(families)
+if args.check:
+    print('Individual tracked trials:    ', sum(models_per_trial))
+    print('Tracked trial families:       ', len(tracked_trials))
+    print('Individual trials found:      ', len(trials))
+    print('Individual untracked trials:  ', sum(num_models))
+    print('Untracked trial families:     ', len(families))
+    print()
+    for f, m in zip(families, num_models):
+        print('{:>3} @ {}'.format(m, f))
 
-for inp in num_inputs:
-    X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train.iterrows()])
-    y_test = test.values
+else:
+    run(num_inputs, families, num_models, train, test)
 
-    curr_family_list = [f for f in families if f.name[4:6] == inp]
+    df.to_csv(str(target_dir / 'result_df.csv'), index=False)
 
-    results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
+    tracked_trials.extend(families)
+    models_per_trial.extend(num_models)
 
-    if isinstance(df, pd.DataFrame):
-        df = pd.concat([df, create_results_df(results)])
-    else:
-        df = create_results_df(results)
+    with open(str(target_dir / 'tracked.pkl'), 'wb') as f:
+        pkl.dump((tracked_trials, models_per_trial), f)
 
-df.to_csv(str(target_dir / 'result_df.csv'), index=False)
-
-with open(str(target_dir / 'tracked.pkl'), 'wb') as f:
-    pkl.dump(tracked_trials, f)
-
-print('Done!')
+    print('Done!')
 

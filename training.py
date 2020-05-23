@@ -35,7 +35,7 @@ else:
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([200, 250]))
-bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu', 'leaky', 'tanh']))
+bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
 direction = hp.HParam('direction', hp.Discrete(['bi']))
 

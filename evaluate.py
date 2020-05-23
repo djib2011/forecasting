@@ -165,7 +165,7 @@ def evaluate_model_ensembles(families, x, y):
     return results
 
 
-def run(num_inputs, families, num_models, train_set, test_set):
+def run(num_inputs, families, num_models, train_set, test_set, df):
     for inp in num_inputs:
         X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train_set.iterrows()])
         y_test = test_set.values
@@ -241,7 +241,7 @@ if args.check:
         print('{:>3} @ {}'.format(m, f))
 
 else:
-    run(num_inputs, families, num_models, train, test)
+    df = run(num_inputs, families, num_models, train, test, df)
 
     df.to_csv(str(target_dir / 'result_df.csv'), index=False)
 

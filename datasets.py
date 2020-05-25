@@ -3,7 +3,16 @@ import numpy as np
 import pickle as pkl
 
 
-def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True):
+def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmentation=False):
+
+    def augment(x, y):
+        random_ind_1 = tf.random.categorical(tf.math.log([[1.] * (batch_size // 2)]), batch_size // 2)
+        random_ind_2 = tf.random.categorical(tf.math.log([[1.] * (batch_size // 2)]), batch_size // 2)
+
+        x_aug = (tf.gather(x, random_ind_1) + tf.gather(x, random_ind_2)) / 2
+        y_aug = (tf.gather(y, random_ind_1) + tf.gather(y, random_ind_2)) / 2
+
+        return tf.concat([x, tf.squeeze(x_aug, [0])], axis=0), tf.concat([y, tf.squeeze(y_aug, [0])], axis=0)
 
     # Load data
     with open(data_path, 'rb') as f:
@@ -21,7 +30,9 @@ def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True):
     if shuffle:
         data = data.shuffle(buffer_size=len(x))
     data = data.repeat()
-    data = data.batch(batch_size=batch_size)
+    data = data.batch(batch_size=batch_size // 2)
+    if augmentation:
+        data = data.map(augment)
     data = data.prefetch(buffer_size=1)
 
     data.__class__ = type(data.__class__.__name__, (data.__class__,), {'__len__': lambda self: len(x)})

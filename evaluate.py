@@ -218,7 +218,7 @@ if __name__ == '__main__':
 
     trials = list(p.glob('*'))
     trials = check_for_errors(trials, fix=False)
-    trials = [t for t in trials if not str(t).startswith('line')]
+    trials = [t for t in trials if not t.name.startswith('line')]
 
     families, num_models = filter_tracked(trials, tracked_trials, models_per_trial)
 

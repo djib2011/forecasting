@@ -2,9 +2,8 @@ import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
 import metrics
 from datasets import seq2seq_generator
-from networks import bidirectional_ae_2_layer, unidirectional_ae_2_layer
+from networks import bidirectional_ae_2_layer, unidirectional_ae_2_layer, bidirectional_ae_3_layer
 import os
-import sys
 import argparse
 
 # Parse command line arguments
@@ -13,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input_len', type=int, default=12, help='Insample length.')
 parser.add_argument('-o', '--overlap', type=int, default=6, help='Length of overlap between input and output. '
                                                                   'Outsample length is overlap + 6.')
+parser.add_argument('--aug', action='store_true', help='Use data augmentation to generate more series.')
 parser.add_argument('--line', action='store_true', help='Approximate outsample with a linear regression.')
 parser.add_argument('--no_logs', action='store_false', help='Don\'t store log files for any of the runs')
 parser.add_argument('--debug', action='store_true', help='Don\'t train any of the models.')
@@ -25,11 +25,11 @@ out_length = overlap + 6
 
 # load datasets
 if args.line:
-    train_set = seq2seq_generator('data/yearly_{}_train_line.pkl'.format(inp_length + 6), overlap=overlap)
-    test_set = seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap)
+    train_set = seq2seq_generator('data/yearly_{}_train_line.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
+    test_set = seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
 else:
-    train_set = seq2seq_generator('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap)
-    test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap)
+    train_set = seq2seq_generator('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
+    test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
 
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
@@ -79,7 +79,7 @@ def run(run_name, model_generator, hparams, epochs=10, batch_size=256, logs=True
             tf.summary.scalar(name, value, step=epochs)
 
 
-model_mapping = {'uni': unidirectional_ae_2_layer, 'bi': bidirectional_ae_2_layer}
+model_mapping = {'uni': unidirectional_ae_2_layer, 'bi': bidirectional_ae_2_layer, 'bi2': bidirectional_ae_3_layer}
 
 with tf.summary.create_file_writer('logs/tuning').as_default():
     hp.hparams_config(
@@ -118,7 +118,7 @@ def hyperparam_loop(logs=True, line=False):
                                 if args.debug:
                                     continue
                                 run(run_name, model_generator=model_mapping[direct],
-                                    hparams=hparams, epochs=5, logs=logs)
+                                    hparams=hparams, epochs=10, logs=logs)
 
 
 if __name__ == '__main__':

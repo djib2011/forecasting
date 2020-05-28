@@ -239,8 +239,8 @@ if __name__ == '__main__':
 
         df.to_csv(str(target_dir / 'result_df.csv'), index=False)
 
-        tracked_trials.extend(families)
-        models_per_trial.extend(num_models)
+        tracked_trials = list(set(tracked_trials + families))
+        models_per_trial = [len(list(p.glob(f.name + '*'))) for f in tracked_trials]
 
         with open(str(target_dir / 'tracked.pkl'), 'wb') as f:
             pkl.dump((tracked_trials, models_per_trial), f)

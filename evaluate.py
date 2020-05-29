@@ -4,11 +4,11 @@ import pandas as pd
 from tqdm import tqdm
 import pickle as pkl
 import tensorflow as tf
-import sys
 import argparse
 import os
 
 import metrics
+
 
 def check_for_errors(trials, fix=True):
     if fix:

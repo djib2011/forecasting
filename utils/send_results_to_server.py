@@ -1,14 +1,7 @@
 import os
 from pathlib import Path
-import sys
 from tqdm import tqdm
 import argparse
-
-check = False
-
-if len(sys.argv) > 1:
-    if sys.argv[1] == '--debug':
-        check = True
 
 parser = argparse.ArgumentParser()
 

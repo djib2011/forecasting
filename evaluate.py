@@ -75,17 +75,33 @@ def get_predictions(model, X):
 def create_results_df(results, ensemble=False):
     new_keys = [k for k in results['smape'].keys() if not k.isdigit()]
     columns = ['input_len', 'output_len', 'loss', 'bottleneck_size',
-               'bottleneck_activation', 'LSTM_type', 'num']
+               'bottleneck_activation', 'model_type', 'num']
     if ensemble:
         columns.pop()
+
+    lines, augs = [], []
+    for k in new_keys:
+        if 'line' in k:
+            lines.append(True)
+            k = k.replace('line__', '')
+        else:
+            lines.append(False)
+        if 'aug' in k:
+            augs.append(True)
+            k = k.replace('line__', '')
+        else:
+            augs.append(False)
 
     df = pd.DataFrame([k.split('__') for k in new_keys],
                       columns=columns)
 
     for column in ('input_len', 'output_len', 'loss',
                    'bottleneck_size', 'bottleneck_activation',
-                   'LSTM_type'):
+                   'model_type'):
         df[column] = df[column].apply(lambda x: x.split('_')[1])
+
+    df['line'] = lines
+    df['aug'] = augs
 
     df['smape'] = [results['smape'][k] if results['smape'][k] else np.nan for k in new_keys]
     df['mase*'] = [results['mase'][k] if results['mase'][k] else np.nan for k in new_keys]
@@ -193,7 +209,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-f', '--fresh', action='store_true', help='Ignore tracked experiments; Evaluate all models from '
-                                                                 'scratch.')
+                                                                   'scratch.')
     parser.add_argument('-d', '--debug', action='store_true', help='Print which experiments will be evaluated (i.e. don\'t run actual evaluations.')
     args = parser.parse_args()
 
@@ -220,7 +236,7 @@ if __name__ == '__main__':
 
     trials = list(p.glob('*'))
     trials = check_for_errors(trials, fix=False)
-    trials = [t for t in trials if not t.name.startswith('line')]
+    # trials = [t for t in trials if not t.name.startswith('line')]
 
     families, num_models = filter_tracked(trials, tracked)
 

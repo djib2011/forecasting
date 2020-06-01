@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
 import metrics
 from datasets import seq2seq_generator
-from networks import bidirectional_ae_2_layer, unidirectional_ae_2_layer, bidirectional_ae_3_layer
+import networks
 import os
 import argparse
 
@@ -34,16 +34,16 @@ else:
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
-bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([25, 50]))
-bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu', 'leaky', 'tanh']))
+bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([200, 250]))
+bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['bi']))
+direction = hp.HParam('direction', hp.Discrete(['conv', 'fc']))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
 mape = metrics.build_mape(overlap=overlap)
 smape = metrics.build_smape(overlap=overlap)
-metric_names = ['MSE', 'MAE', 'MAPE', 'sMAPE', 'Reconstruction Loss', ]
+metric_names = ['MSE', 'MAE', 'MAPE', 'sMAPE', 'Reconstruction Loss']
 metric_functions = ['mse', 'mae', mape, smape, reconstruction_loss]
 
 if overlap:
@@ -52,6 +52,7 @@ if overlap:
     owa_estimate = metrics.build_owa(overlap=overlap)
     metric_names.extend(['MASE', 'OWA (estimate)'])
     metric_functions.extend([mase, owa_estimate])
+
 
 # write model training/testing function
 def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=256, logs=True):
@@ -79,7 +80,9 @@ def run(run_name, model_generator, hparams, epochs=10, batch_size=256, logs=True
             tf.summary.scalar(name, value, step=epochs)
 
 
-model_mapping = {'uni': unidirectional_ae_2_layer, 'bi': bidirectional_ae_2_layer, 'bi2': bidirectional_ae_3_layer}
+model_mapping = {'uni': networks.unidirectional_ae_2_layer, 'bi': networks.bidirectional_ae_2_layer,
+                 'bi2': networks.bidirectional_ae_3_layer, 'conv': networks.convolutional_ae_2_layer,
+                 'fc': networks.fully_connected_ae_2_layer}
 
 with tf.summary.create_file_writer('logs/tuning').as_default():
     hp.hparams_config(
@@ -90,7 +93,7 @@ with tf.summary.create_file_writer('logs/tuning').as_default():
 
 
 # Start training loop
-def hyperparam_loop(logs=True, line=False):
+def hyperparam_loop(logs=True, line=False, aug=False):
     for inp_seq in input_seq_length.domain.values:
         for out_seq in output_seq_length.domain.values:
             for loss in loss_function.domain.values:
@@ -111,15 +114,20 @@ def hyperparam_loop(logs=True, line=False):
                                                                                                              direct, i)
                                 if line:
                                     run_name = 'line__' + run_name
+                                if aug:
+                                    run_name = 'aug__' + run_name
 
                                 print('-' * 30)
                                 print('Starting trial {}: {}'.format(i, run_name))
                                 print(hparams)
                                 if args.debug:
+                                    model = model_mapping[direct](hparams, metric_functions)
+                                    x, y = next(iter(train_set))
+                                    model.train_on_batch(x, y)
                                     continue
                                 run(run_name, model_generator=model_mapping[direct],
                                     hparams=hparams, epochs=5, logs=logs)
 
 
 if __name__ == '__main__':
-    hyperparam_loop(logs=(not args.no_logs), line=args.line)
+    hyperparam_loop(logs=(not args.no_logs), line=args.line, aug=args.aug)

@@ -34,10 +34,10 @@ else:
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
-bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([200, 250]))
-bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
+bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([250, 300]))
+bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu', 'tanh', 'leaky']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['conv', 'fc']))
+direction = hp.HParam('direction', hp.Discrete(['bi2']))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)

@@ -240,7 +240,7 @@ if __name__ == '__main__':
 
     families, num_models = filter_tracked(trials, tracked)
 
-    num_inputs = np.unique([f.name[4:6] for f in families if not f.name.isdigit()])
+    num_inputs = np.unique([f.name.replace('aug__', '').replace('line__', '')[4:6] for f in families if not f.name.isdigit()])
 
     if args.debug:
         print('Individual tracked trials:    ', sum(tracked.values()))

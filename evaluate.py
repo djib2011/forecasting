@@ -88,11 +88,11 @@ def create_results_df(results, ensemble=False):
             lines.append(False)
         if 'aug' in k:
             augs.append(True)
-            k = k.replace('line__', '')
+            k = k.replace('aug__', '')
         else:
             augs.append(False)
 
-    df = pd.DataFrame([k.split('__') for k in new_keys],
+    df = pd.DataFrame([k.replace('line__', '').replace('aug__', '').split('__') for k in new_keys],
                       columns=columns)
 
     for column in ('input_len', 'output_len', 'loss',
@@ -105,7 +105,6 @@ def create_results_df(results, ensemble=False):
 
     df['smape'] = [results['smape'][k] if results['smape'][k] else np.nan for k in new_keys]
     df['mase*'] = [results['mase'][k] if results['mase'][k] else np.nan for k in new_keys]
-
     return df
 
 
@@ -185,7 +184,8 @@ def run(num_inputs, families, num_models, train_set, test_set, df):
         X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train_set.iterrows()])
         y_test = test_set.values
 
-        curr_family_list = [(f, m) for f, m in zip(families, num_models) if f.name[4:6] == inp]
+        curr_family_list = [(f, m) for f, m in zip(families, num_models)
+                            if f.name.replace('aug__', '').replace('line__', '')[4:6] == inp]
 
         results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
 

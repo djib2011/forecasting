@@ -34,10 +34,10 @@ else:
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
-bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([250, 300]))
+bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([350]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu', 'tanh', 'leaky']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['bi2']))
+direction = hp.HParam('direction', hp.Discrete(['comb']))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
@@ -80,9 +80,10 @@ def run(run_name, model_generator, hparams, epochs=10, batch_size=256, logs=True
             tf.summary.scalar(name, value, step=epochs)
 
 
-model_mapping = {'uni': networks.unidirectional_ae_2_layer, 'bi': networks.bidirectional_ae_2_layer,
-                 'bi2': networks.bidirectional_ae_3_layer, 'conv': networks.convolutional_ae_2_layer,
-                 'fc': networks.fully_connected_ae_2_layer}
+model_mapping = {'uni': networks.unidirectional_ae_2_layer, 'fc': networks.fully_connected_ae_2_layer,
+                 'bi': networks.bidirectional_ae_2_layer, 'bi2': networks.bidirectional_ae_3_layer,
+                 'conv': networks.convolutional_ae_2_layer, 'conv2': networks.convolutional_ae_3_layer,
+                 'comb': networks.combined_ae_2_layer}
 
 with tf.summary.create_file_writer('logs/tuning').as_default():
     hp.hparams_config(

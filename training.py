@@ -37,7 +37,7 @@ output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([300, 600]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['bi', 'bi2', 'conv', 'conv2']))
+direction = hp.HParam('direction', hp.Discrete(['bi', 'conv']))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
@@ -83,7 +83,8 @@ def run(run_name, model_generator, hparams, epochs=10, batch_size=256, logs=True
 model_mapping = {'uni': networks.unidirectional_ae_2_layer, 'fc': networks.fully_connected_ae_2_layer,
                  'bi': networks.bidirectional_ae_2_layer, 'bi2': networks.bidirectional_ae_3_layer,
                  'conv': networks.convolutional_ae_2_layer, 'conv2': networks.convolutional_ae_3_layer,
-                 'comb': networks.combined_ae_2_layer}
+                 'conv3': networks.convolutional_ae_4_layer, 'comb': networks.combined_ae_2_layer,
+                 'cat': networks.concat_ae_2_layer}
 
 with tf.summary.create_file_writer('logs/tuning').as_default():
     hp.hparams_config(

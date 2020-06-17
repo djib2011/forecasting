@@ -37,7 +37,7 @@ output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([300, 600]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['bi', 'conv']))
+direction = hp.HParam('direction', hp.Discrete(['conv']))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)

@@ -24,7 +24,7 @@ def check_families_for_errors(families, num_models):
 
 def filter_tracked(candidate_names, tracked_dict):
     candidate_families = list(set([Path('__'.join(str(t).split('__')[:-1])) for t in candidate_names]))
-    candidate_models = [len(list(p.glob(f.name + '*'))) for f in candidate_families]
+    candidate_models = [len(list(p.glob(f.name + '__*'))) for f in candidate_families]
 
     untracked_families, untracked_nums = [], []
 
@@ -34,8 +34,19 @@ def filter_tracked(candidate_names, tracked_dict):
                 continue
         untracked_families.append(candidate_families[i])
         untracked_nums.append(candidate_models[i])
-
+    
     filtered = check_families_for_errors(untracked_families, untracked_nums)
+
+    if args.debug:
+        difference = set(untracked_families).difference([f[0] for f in filtered])
+        if difference:
+            print('Number of errors found in untracked models:', len(difference))
+            print('{:^60} --> {:^10} {:^10}'.format('family name', 'expected', 'actual'))
+        for d in difference:
+            expected = untracked_nums[untracked_families.index(d)]
+            s = sum([(Path(str(d) + '__' + str(n)) / 'best_weights.h5').exists() for n in range(expected)])
+            print('{:>60} --> {:>10} {:>10}'.format(str(d), expected, s))
+
     if filtered:
         untracked_families, untracked_nums = zip(*filtered)
         return untracked_families, untracked_nums

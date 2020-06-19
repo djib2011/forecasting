@@ -90,29 +90,22 @@ def create_results_df(results, ensemble=False):
     if ensemble:
         columns.pop()
 
-    lines, augs = [], []
+    lines = []
     for k in new_keys:
         if 'line' in k:
             lines.append(True)
-            k = k.replace('line__', '')
         else:
             lines.append(False)
-        if 'aug' in k:
-            augs.append(True)
-            k = k.replace('aug__', '')
-        else:
-            augs.append(False)
 
-    df = pd.DataFrame([k.replace('line__', '').replace('aug__', '').split('__') for k in new_keys],
+    df = pd.DataFrame([k.replace('line__', '').split('__') for k in new_keys],
                       columns=columns)
 
-    for column in ('input_len', 'output_len', 'loss',
+    for column in ('input_len', 'output_len', 'aug', 'loss',
                    'bottleneck_size', 'bottleneck_activation',
                    'model_type'):
         df[column] = df[column].apply(lambda x: x.split('_')[1])
 
     df['line'] = lines
-    df['aug'] = augs
 
     df['smape'] = [results['smape'][k] if results['smape'][k] else np.nan for k in new_keys]
     df['mase*'] = [results['mase'][k] if results['mase'][k] else np.nan for k in new_keys]
@@ -196,7 +189,7 @@ def run(num_inputs, families, num_models, train_set, test_set, df):
         y_test = test_set.values
 
         curr_family_list = [(f, m) for f, m in zip(families, num_models)
-                            if f.name.replace('aug__', '').replace('line__', '')[4:6] == inp]
+                            if f.name.replace('line__', '')[4:6] == inp]
 
         results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
 
@@ -251,7 +244,7 @@ if __name__ == '__main__':
 
     families, num_models = filter_tracked(trials, tracked)
 
-    num_inputs = np.unique([f.name.replace('aug__', '').replace('line__', '')[4:6] for f in families if not f.name.isdigit()])
+    num_inputs = np.unique([f.name.replace('line__', '')[4:6] for f in families if not f.name.isdigit()])
 
     if args.debug:
         print('Individual tracked trials:    ', sum(tracked.values()))

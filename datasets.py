@@ -3,11 +3,14 @@ import numpy as np
 import pickle as pkl
 
 
-def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmentation=False):
+def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmentation=0):
+
+    aug_batch_size = int(batch_size * augmentation)
+    real_batch_size = int(batch_size * (1 - augmentation))
 
     def augment(x, y):
-        random_ind_1 = tf.random.categorical(tf.math.log([[1.] * (batch_size // 2)]), batch_size // 2)
-        random_ind_2 = tf.random.categorical(tf.math.log([[1.] * (batch_size // 2)]), batch_size // 2)
+        random_ind_1 = tf.random.categorical(tf.math.log([[1.] * aug_batch_size]), aug_batch_size)
+        random_ind_2 = tf.random.categorical(tf.math.log([[1.] * aug_batch_size]), aug_batch_size)
 
         x_aug = (tf.gather(x, random_ind_1) + tf.gather(x, random_ind_2)) / 2
         y_aug = (tf.gather(y, random_ind_1) + tf.gather(y, random_ind_2)) / 2
@@ -30,7 +33,7 @@ def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmen
     if shuffle:
         data = data.shuffle(buffer_size=len(x))
     data = data.repeat()
-    data = data.batch(batch_size=batch_size // 2)
+    data = data.batch(batch_size=real_batch_size)
     if augmentation:
         data = data.map(augment)
     data = data.prefetch(buffer_size=1)

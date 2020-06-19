@@ -85,7 +85,7 @@ def get_predictions(model, X):
 
 def create_results_df(results, ensemble=False):
     new_keys = [k for k in results['smape'].keys() if not k.isdigit()]
-    columns = ['input_len', 'output_len', 'loss', 'bottleneck_size',
+    columns = ['input_len', 'output_len', 'aug', 'loss', 'bottleneck_size',
                'bottleneck_activation', 'model_type', 'num']
     if ensemble:
         columns.pop()

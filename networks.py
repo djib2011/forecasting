@@ -218,4 +218,3 @@ def concat_ae_2_layer(hparams, metrics):
     model = tf.keras.models.Model(inp, out)
     model.compile(loss=hparams['loss_function'], optimizer='adam', metrics=metrics)
     return model
-

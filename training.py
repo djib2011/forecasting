@@ -35,7 +35,7 @@ else:
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
 augmentation = hp.HParam('direction', hp.Discrete([args.aug]))
-bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([300, 400, 500, 600, 700]))
+bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([700]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
 direction = hp.HParam('direction', hp.Discrete(['conv3']))
@@ -131,5 +131,6 @@ def hyperparam_loop(logs=True, line=False, epochs=5):
 
 
 if __name__ == '__main__':
-    epochs = 10 if args.aug else 5
+    max_epochs = 20
+    epochs = min(max_epochs, int(5 / (1 - args.aug)))
     hyperparam_loop(logs=(not args.no_logs), line=args.line, epochs=epochs)

@@ -9,8 +9,8 @@ def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmen
     real_batch_size = int(batch_size * (1 - augmentation))
 
     def augment(x, y):
-        random_ind_1 = tf.random.categorical(tf.math.log([[1.] * aug_batch_size]), aug_batch_size)
-        random_ind_2 = tf.random.categorical(tf.math.log([[1.] * aug_batch_size]), aug_batch_size)
+        random_ind_1 = tf.random.categorical(tf.math.log([[1.] * real_batch_size]), aug_batch_size)
+        random_ind_2 = tf.random.categorical(tf.math.log([[1.] * real_batch_size]), aug_batch_size)
 
         x_aug = (tf.gather(x, random_ind_1) + tf.gather(x, random_ind_2)) / 2
         y_aug = (tf.gather(y, random_ind_1) + tf.gather(y, random_ind_2)) / 2

@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
 import metrics
-from datasets import seq2seq_generator
+from datasets import seq2seq_generator, seq2seq_generator_with_aug
 import networks
 import os
 import argparse
@@ -26,10 +26,12 @@ out_length = overlap + 6
 # load datasets
 if args.line:
     train_set = seq2seq_generator('data/yearly_{}_train_line.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
-    test_set = seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
+    test_set = seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap, augmentation=0)
 else:
-    train_set = seq2seq_generator('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
-    test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
+    train_set = seq2seq_generator_with_aug('data/yearly_{}_train.pkl'.format(inp_length + 6),
+                                           'data/yearly_{}_train_aug.pkl'.format(inp_length + 6),
+                                           overlap=overlap, augmentation=args.aug)
+    test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap, augmentation=0)
 
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
@@ -124,6 +126,7 @@ def hyperparam_loop(logs=True, line=False, epochs=5):
                                     if args.debug:
                                         model = model_mapping[direct](hparams, metric_functions)
                                         x, y = next(iter(train_set))
+                                        print('Batch shape', x.shape, y.shape)
                                         model.train_on_batch(x, y)
                                         continue
                                     run(run_name, model_generator=model_mapping[direct],

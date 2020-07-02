@@ -57,8 +57,9 @@ def seq2seq_generator_with_aug(data_path, aug_path, batch_size=256, overlap=6, s
     if debug:
         print('Augmentation available size:', x_aug.shape[0])
 
-    x_aug = x_aug[:aug_size]
-    y_aug = y_aug[:aug_size]
+    aug_ind = np.random.permutation(x_aug.shape[0])[:aug_size]
+    x_aug = x_aug[aug_ind]
+    y_aug = y_aug[aug_ind]
 
     if debug:
         print('Augmentation target size:', aug_size)

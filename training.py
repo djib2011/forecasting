@@ -23,15 +23,31 @@ inp_length = args.input_len
 overlap = args.overlap
 out_length = overlap + 6
 
+batch_size = 256
+if args.aug >= 0.5:
+    batch_size *= 2
+if args.aug >= 0.75:
+    batch_size *= 2
+if args.aug >= 0.875:
+    batch_size *= 2
+# if args.aug >= 0.9375:
+#     batch_size *= 2
+# if args.aug >= 0.96875:
+#     batch_size *= 2
+# if args.aug >= 0.984375:
+#     batch_size *= 2
+
 # load datasets
 if args.line:
-    train_set = seq2seq_generator('data/yearly_{}_train_line.pkl'.format(inp_length + 6), overlap=overlap, augmentation=args.aug)
-    test_set = seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap, augmentation=0)
+    train_set = seq2seq_generator('data/yearly_{}_train_line.pkl'.format(inp_length + 6), overlap=overlap,
+                                  batch_size=batch_size, augmentation=args.aug, debug=args.debug)
+    test_set = seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap,
+                                 batch_size=batch_size, augmentation=0)
 else:
-    train_set = seq2seq_generator_with_aug('data/yearly_{}_train.pkl'.format(inp_length + 6),
-                                           'data/yearly_{}_train_aug.pkl'.format(inp_length + 6),
-                                           overlap=overlap, augmentation=args.aug)
-    test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap, augmentation=0)
+    train_set = seq2seq_generator('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap,
+                                  batch_size=batch_size, augmentation=args.aug, debug=args.debug)
+    test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap,
+                                 batch_size=batch_size, augmentation=0)
 
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
@@ -75,7 +91,7 @@ def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=2
     return model.evaluate(test_set, steps=len(test_set)//batch_size+1)
 
 
-def run(run_name, model_generator, hparams, epochs=10, batch_size=256, logs=True):
+def run(run_name, model_generator, hparams, epochs=10, batch_size=512, logs=True):
     with tf.summary.create_file_writer('logs/tuning/' + str(run_name)).as_default():
         hp.hparams(hparams)
         results = train_test_model(model_generator, hparams, run_name, epochs, batch_size, logs=logs)
@@ -98,7 +114,7 @@ with tf.summary.create_file_writer('logs/tuning').as_default():
 
 
 # Start training loop
-def hyperparam_loop(logs=True, line=False, epochs=5):
+def hyperparam_loop(logs=True, line=False, epochs=5, batch_size=256):
     for inp_seq in input_seq_length.domain.values:
         for out_seq in output_seq_length.domain.values:
             for aug in augmentation.domain.values:
@@ -130,10 +146,10 @@ def hyperparam_loop(logs=True, line=False, epochs=5):
                                         model.train_on_batch(x, y)
                                         continue
                                     run(run_name, model_generator=model_mapping[direct],
-                                        hparams=hparams, epochs=epochs, logs=logs)
+                                        hparams=hparams, epochs=epochs, logs=logs, batch_size=batch_size)
 
 
 if __name__ == '__main__':
     max_epochs = 20
     epochs = min(max_epochs, int(5 / (1 - args.aug)))
-    hyperparam_loop(logs=(not args.no_logs), line=args.line, epochs=epochs)
+    hyperparam_loop(logs=(not args.no_logs), line=args.line, epochs=epochs, batch_size=batch_size)

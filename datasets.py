@@ -3,10 +3,20 @@ import numpy as np
 import pickle as pkl
 import argparse
 
-def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmentation=0):
+
+def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmentation=0, debug=False):
 
     aug_batch_size = int(batch_size * augmentation)
     real_batch_size = int(batch_size * (1 - augmentation))
+
+    if debug:
+        print('---------- Generator ----------')
+        print('Augmentation percentage:', augmentation)
+        print('Batch size:             ', batch_size)
+        print('Real batch size:        ', real_batch_size)
+        print('Augmentation batch size:', aug_batch_size)
+        print('Max aug num:            ', real_batch_size * (real_batch_size - 1) // 2)
+        print('------------------------------')
 
     def augment(x, y):
         random_ind_1 = tf.random.categorical(tf.math.log([[1.] * real_batch_size]), aug_batch_size)

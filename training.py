@@ -152,4 +152,5 @@ def hyperparam_loop(logs=True, line=False, epochs=5, batch_size=256):
 if __name__ == '__main__':
     max_epochs = 20
     epochs = min(max_epochs, int(5 / (1 - args.aug)))
-    hyperparam_loop(logs=(not args.no_logs), line=args.line, epochs=epochs, batch_size=batch_size)
+    real_batch_size = int(batch_size * (1 - args.aug))
+    hyperparam_loop(logs=(not args.no_logs), line=args.line, epochs=epochs, batch_size=real_batch_size)

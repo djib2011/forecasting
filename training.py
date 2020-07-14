@@ -15,7 +15,8 @@ parser.add_argument('-o', '--overlap', type=int, default=6, help='Length of over
 parser.add_argument('-a', '--aug', type=float, default=0., help='Percentage of augmented series in batch')
 parser.add_argument('--line', action='store_true', help='Approximate outsample with a linear regression.')
 parser.add_argument('--no_logs', action='store_false', help='Don\'t store log files for any of the runs')
-parser.add_argument('--debug', action='store_true', help='Don\'t train any of the models.')
+parser.add_argument('--debug', action='store_true', help='Run in debug mode: Don\'t train any of the models and print '
+                                                         'lots of diagnostic messages.')
 
 args = parser.parse_args()
 
@@ -30,10 +31,10 @@ if args.aug >= 0.75:
     batch_size *= 2
 if args.aug >= 0.875:
     batch_size *= 2
-# if args.aug >= 0.9375:
-#     batch_size *= 2
-# if args.aug >= 0.96875:
-#     batch_size *= 2
+if args.aug >= 0.9375:
+    batch_size *= 2
+if args.aug >= 0.96875:
+   batch_size *= 2
 # if args.aug >= 0.984375:
 #     batch_size *= 2
 

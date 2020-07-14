@@ -103,6 +103,58 @@ def seq2seq_generator_with_aug(data_path, aug_path, batch_size=256, overlap=6, s
     return data
 
 
+def seq2seq_generator_decomposed(data_path, batch_size=256, overlap=6, shuffle=True, augmentation=0, debug=False):
+
+    aug_batch_size = int(batch_size * augmentation)
+    real_batch_size = int(batch_size * (1 - augmentation))
+
+    if debug:
+        print('---------- Generator ----------')
+        print('Augmentation percentage:', augmentation)
+        print('Batch size:             ', batch_size)
+        print('Real batch size:        ', real_batch_size)
+        print('Augmentation batch size:', aug_batch_size)
+        print('Max aug num:            ', real_batch_size * (real_batch_size - 1) // 2)
+        print('-------------------------------')
+
+    def augment(x1, x2, y):
+        random_ind_1 = tf.random.categorical(tf.math.log([[1.] * real_batch_size]), aug_batch_size)
+        random_ind_2 = tf.random.categorical(tf.math.log([[1.] * real_batch_size]), aug_batch_size)
+
+        x1_aug = (tf.gather(x1, random_ind_1) + tf.gather(x1, random_ind_2)) / 2
+        x2_aug = (tf.gather(x2, random_ind_1) + tf.gather(x2, random_ind_2)) / 2
+        y_aug = (tf.gather(y, random_ind_1) + tf.gather(y, random_ind_2)) / 2
+
+        return (tf.concat([x1, tf.squeeze(x1_aug, [0])], axis=0),
+                tf.concat([x2, tf.squeeze(x2_aug, [0])], axis=0),
+                tf.concat([y, tf.squeeze(y_aug, [0])], axis=0))
+
+    # Load data
+    with open(data_path, 'rb') as f:
+        x1, x2, y = pkl.load(f)
+
+    # Overlap input with output
+    if overlap:
+        y = np.c_[(x1 + x2)[:, -overlap:], y]
+
+    x1 = x1[..., np.newaxis]
+    x2 = x2[..., np.newaxis]
+    y = y[..., np.newaxis]
+
+    # Tensorflow dataset
+    data = tf.data.Dataset.from_tensor_slices((x1, x2, y))
+    if shuffle:
+        data = data.shuffle(buffer_size=len(y))
+    data = data.repeat()
+    data = data.batch(batch_size=real_batch_size)
+    if augmentation:
+        data = data.map(augment)
+    data = data.prefetch(buffer_size=1)
+
+    data.__class__ = type(data.__class__.__name__, (data.__class__,), {'__len__': lambda self: len(y)})
+    return data
+
+
 if __name__ == '__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser()
@@ -111,7 +163,9 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--overlap', type=int, default=6, help='Length of overlap between input and output. '
                                                                      'Outsample length is overlap + 6.')
     parser.add_argument('-a', '--aug', type=float, default=0., help='Percentage of augmented series in batch')
+    parser.add_argument('-d', '--decomposed', action='store_true', help='Deompose inputs.')
     parser.add_argument('--line', action='store_true', help='Approximate outsample with a linear regression.')
+    parser.add_argument('--debug', action='store_true', help='Run in debug mode: Print lots of diagnostic messages.')
 
     args = parser.parse_args()
 
@@ -122,24 +176,44 @@ if __name__ == '__main__':
     if args.line:
         train_set = 'data/yearly_{}_train_line.pkl'.format(inp_length + 6)
         test_set = 'data/yearly_{}_validation_line.pkl'.format(inp_length + 6)
+        gen = seq2seq_generator
+    elif args.decomposed:
+        train_set = 'data/yearly_{}_train_decomposed.pkl'.format(inp_length + 6)
+        test_set = 'data/yearly_{}_validation_decomposed.pkl'.format(inp_length + 6)
+        gen = seq2seq_generator_decomposed
     else:
         train_set = 'data/yearly_{}_train.pkl'.format(inp_length + 6)
         test_set = 'data/yearly_{}_validation.pkl'.format(inp_length + 6)
+        gen = seq2seq_generator
 
-    if args.aug:
-        augmentation_set = 'data/yearly_{}_train_aug.pkl'.format(inp_length + 6)
-        train_gen = seq2seq_generator_with_aug(train_set, augmentation_set, 256, overlap, True, args.aug, True)
+    if args.decomposed:
+        train_gen = seq2seq_generator_decomposed(train_set, batch_size=256, overlap=overlap, shuffle=True,
+                                                 augmentation=args.aug, debug=args.debug)
+        test_gen = seq2seq_generator_decomposed(test_set, batch_size=256, overlap=overlap, shuffle=True,
+                                                augmentation=0, debug=args.debug)
+
+        for x1, x2, y in train_gen:
+            print('Train set:')
+            print(x1.shape, x2.shape, y.shape)
+            break
+
+        for x1, x2, y in test_gen:
+            print('Test set:')
+            print(x1.shape, x2.shape, y.shape)
+            break
+
     else:
-        train_gen = seq2seq_generator(train_set, 256, overlap, True, args.aug)
+        train_gen = seq2seq_generator(train_set, batch_size=256, overlap=overlap, shuffle=True,
+                                      augmentation=args.aug, debug=args.debug)
+        test_gen = seq2seq_generator(test_set, batch_size=256, overlap=overlap, shuffle=True,
+                                     augmentation=0, debug=args.debug)
 
-    test_gen = seq2seq_generator(test_set, 256, overlap, True, 0)
+        for x, y in train_gen:
+            print('Train set:')
+            print(x.shape, y.shape)
+            break
 
-    for x, y in train_gen:
-        print('Train set:')
-        print(x.shape, y.shape)
-        break
-
-    for x, y in test_gen:
-        print('Test set:')
-        print(x.shape, y.shape)
-        break
+        for x, y in test_gen:
+            print('Test set:')
+            print(x.shape, y.shape)
+            break

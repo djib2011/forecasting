@@ -117,7 +117,11 @@ def seq2seq_generator_decomposed(data_path, batch_size=256, overlap=6, shuffle=T
         print('Max aug num:            ', real_batch_size * (real_batch_size - 1) // 2)
         print('-------------------------------')
 
-    def augment(x1, x2, y):
+    def augment(x, y):
+
+        x1 = x[0]
+        x2 = x[1]
+
         random_ind_1 = tf.random.categorical(tf.math.log([[1.] * real_batch_size]), aug_batch_size)
         random_ind_2 = tf.random.categorical(tf.math.log([[1.] * real_batch_size]), aug_batch_size)
 
@@ -125,9 +129,13 @@ def seq2seq_generator_decomposed(data_path, batch_size=256, overlap=6, shuffle=T
         x2_aug = (tf.gather(x2, random_ind_1) + tf.gather(x2, random_ind_2)) / 2
         y_aug = (tf.gather(y, random_ind_1) + tf.gather(y, random_ind_2)) / 2
 
-        return (tf.concat([x1, tf.squeeze(x1_aug, [0])], axis=0),
-                tf.concat([x2, tf.squeeze(x2_aug, [0])], axis=0),
+        return ((tf.concat([x1, tf.squeeze(x1_aug, [0])], axis=0),
+                 tf.concat([x2, tf.squeeze(x2_aug, [0])], axis=0)),
                 tf.concat([y, tf.squeeze(y_aug, [0])], axis=0))
+
+        # return ({'x1': tf.concat([x1, tf.squeeze(x1_aug, [0])], axis=0),
+        #          'x2': tf.concat([x2, tf.squeeze(x2_aug, [0])], axis=0)},
+        #         tf.concat([y, tf.squeeze(y_aug, [0])], axis=0))
 
     # Load data
     with open(data_path, 'rb') as f:
@@ -142,7 +150,7 @@ def seq2seq_generator_decomposed(data_path, batch_size=256, overlap=6, shuffle=T
     y = y[..., np.newaxis]
 
     # Tensorflow dataset
-    data = tf.data.Dataset.from_tensor_slices((x1, x2, y))
+    data = tf.data.Dataset.from_tensor_slices(((x1, x2), y))
     if shuffle:
         data = data.shuffle(buffer_size=len(y))
     data = data.repeat()
@@ -192,12 +200,12 @@ if __name__ == '__main__':
         test_gen = seq2seq_generator_decomposed(test_set, batch_size=256, overlap=overlap, shuffle=True,
                                                 augmentation=0, debug=args.debug)
 
-        for x1, x2, y in train_gen:
+        for (x1, x2), y in train_gen:
             print('Train set:')
             print(x1.shape, x2.shape, y.shape)
             break
 
-        for x1, x2, y in test_gen:
+        for (x1, x2), y in test_gen:
             print('Test set:')
             print(x1.shape, x2.shape, y.shape)
             break

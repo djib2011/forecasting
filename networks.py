@@ -165,7 +165,7 @@ def convolutional_4_layer_2_input(hparams, metrics):
     x = tf.keras.layers.Conv1D(256, kernel_size=(3,),activation='relu', padding='same')(x)
     out = tf.keras.layers.Dense(1)(x)
 
-    model = tf.keras.models.Model([inp1, inp2], out)
+    model = tf.keras.models.Model(inputs={'x1': inp1, 'x2': inp2}, outputs=[out])
 
     model.compile(loss=hparams['loss_function'], optimizer='adam', metrics=metrics)
 

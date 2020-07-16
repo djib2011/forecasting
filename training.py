@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
 import metrics
-from datasets import seq2seq_generator, seq2seq_generator_with_aug
+import datasets
 import networks
 import os
 import argparse
@@ -13,6 +13,7 @@ parser.add_argument('-i', '--input_len', type=int, default=12, help='Insample le
 parser.add_argument('-o', '--overlap', type=int, default=6, help='Length of overlap between input and output. '
                                                                   'Outsample length is overlap + 6.')
 parser.add_argument('-a', '--aug', type=float, default=0., help='Percentage of augmented series in batch')
+parser.add_argument('-d', '--decomposed', action='store_true', help='Deompose inputs.')
 parser.add_argument('--line', action='store_true', help='Approximate outsample with a linear regression.')
 parser.add_argument('--no_logs', action='store_false', help='Don\'t store log files for any of the runs')
 parser.add_argument('--debug', action='store_true', help='Run in debug mode: Don\'t train any of the models and print '
@@ -40,15 +41,20 @@ if args.aug >= 0.96875:
 
 # load datasets
 if args.line:
-    train_set = seq2seq_generator('data/yearly_{}_train_line.pkl'.format(inp_length + 6), overlap=overlap,
-                                  batch_size=batch_size, augmentation=args.aug, debug=args.debug)
-    test_set = seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap,
-                                 batch_size=batch_size, augmentation=0)
+    train_set = datasets.seq2seq_generator('data/yearly_{}_train_line.pkl'.format(inp_length + 6), overlap=overlap,
+                                            batch_size=batch_size, augmentation=args.aug, debug=args.debug)
+    test_set = datasets.seq2seq_generator('data/yearly_{}_validation_line.pkl'.format(inp_length + 6), overlap=overlap,
+                                          batch_size=batch_size, augmentation=0)
+elif args.decomposed:
+    train_set = datasets.seq2seq_generator_decomposed('data/yearly_{}_train_decomposed.pkl'.format(inp_length + 6), overlap=overlap,
+                                                      batch_size=batch_size, augmentation=args.aug, debug=args.debug)
+    test_set = datasets.seq2seq_generator_decomposed('data/yearly_{}_validation_decomposed.pkl'.format(inp_length + 6), overlap=overlap,
+                                                      batch_size=batch_size, augmentation=0)
 else:
-    train_set = seq2seq_generator('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap,
-                                  batch_size=batch_size, augmentation=args.aug, debug=args.debug)
-    test_set = seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap,
-                                 batch_size=batch_size, augmentation=0)
+    train_set = datasets.seq2seq_generator('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap,
+                                           batch_size=batch_size, augmentation=args.aug, debug=args.debug)
+    test_set = datasets.seq2seq_generator('data/yearly_{}_validation.pkl'.format(inp_length + 6), overlap=overlap,
+                                          batch_size=batch_size, augmentation=0)
 
 # define grid search
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
@@ -57,7 +63,7 @@ augmentation = hp.HParam('direction', hp.Discrete([args.aug]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([700]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['conv3']))
+direction = hp.HParam('direction', hp.Discrete(['dual_inp']))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
@@ -104,7 +110,7 @@ model_mapping = {'uni': networks.unidirectional_ae_2_layer, 'fc': networks.fully
                  'bi': networks.bidirectional_ae_2_layer, 'bi2': networks.bidirectional_ae_3_layer,
                  'conv': networks.convolutional_ae_2_layer, 'conv2': networks.convolutional_ae_3_layer,
                  'conv3': networks.convolutional_ae_4_layer, 'comb': networks.combined_ae_2_layer,
-                 'cat': networks.concat_ae_2_layer}
+                 'cat': networks.concat_ae_2_layer, 'dual_inp': networks.convolutional_4_layer_2_input}
 
 with tf.summary.create_file_writer('logs/tuning').as_default():
     hp.hparams_config(
@@ -142,9 +148,14 @@ def hyperparam_loop(logs=True, line=False, epochs=5, batch_size=256):
                                     print(hparams)
                                     if args.debug:
                                         model = model_mapping[direct](hparams, metric_functions)
-                                        x, y = next(iter(train_set))
-                                        print('Batch shape', x.shape, y.shape)
-                                        model.train_on_batch(x, y)
+                                        if args.decomposed:
+                                            x, y = next(iter(train_set))
+                                            print('Batch shape', x[0].shape, x[1].shape, y.shape)
+                                            model.train_on_batch(x, y)
+                                        else:
+                                            x, y = next(iter(train_set))
+                                            print('Batch shape', x.shape, y.shape)
+                                            model.train_on_batch(x, y, steps_per_epoch=1, epochs=1)
                                         continue
                                     run(run_name, model_generator=model_mapping[direct],
                                         hparams=hparams, epochs=epochs, logs=logs, batch_size=batch_size)

@@ -240,7 +240,7 @@ if __name__ == '__main__':
 
     trials = list(p.glob('*'))
     trials = check_for_errors(trials, fix=False)
-    # trials = [t for t in trials if not t.name.startswith('line')]
+    trials = [t for t in trials if 'dual_inp' not in t.name]
 
     families, num_models = filter_tracked(trials, tracked)
 

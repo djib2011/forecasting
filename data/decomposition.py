@@ -25,27 +25,29 @@ def run_decomposition(dataset):
     return trends, residuals, dataset[1]
 
 
-# Parse command line arguments
-parser = argparse.ArgumentParser()
+if __name__ == '__main__':
 
-parser.add_argument('-i', '--input_len', type=int, default=12, help='Insample length.')
+    # Parse command line arguments
+    parser = argparse.ArgumentParser()
 
-args = parser.parse_args()
+    parser.add_argument('-i', '--input_len', type=int, default=12, help='Insample length.')
 
-window = args.input_len + 6
+    args = parser.parse_args()
 
-# Load data
-with open('yearly_{}_train.pkl'.format(window), 'rb') as f:
-    train = pkl.load(f)
-with open('yearly_{}_validation.pkl'.format(window), 'rb') as f:
-    test = pkl.load(f)
+    window = args.input_len + 6
 
-# Run the decomposition
-trends_train, residuals_train, y_train = run_decomposition(train)
-trends_test, residuals_test, y_test = run_decomposition(test)
+    # Load data
+    with open('yearly_{}_train.pkl'.format(window), 'rb') as f:
+        train = pkl.load(f)
+    with open('yearly_{}_validation.pkl'.format(window), 'rb') as f:
+        test = pkl.load(f)
 
-# Store data
-with open('yearly_{}_train_decomposed.pkl'.format(window), 'wb') as f:
-    pkl.dump((np.array(trends_train), np.array(residuals_train), y_train), f)
-with open('yearly_{}_validation_decomposed.pkl'.format(window), 'wb') as f:
-    pkl.dump((np.array(trends_test), np.array(residuals_test), y_test), f)
+    # Run the decomposition
+    trends_train, residuals_train, y_train = run_decomposition(train)
+    trends_test, residuals_test, y_test = run_decomposition(test)
+
+    # Store data
+    with open('yearly_{}_train_decomposed.pkl'.format(window), 'wb') as f:
+        pkl.dump((np.array(trends_train), np.array(residuals_train), y_train), f)
+    with open('yearly_{}_validation_decomposed.pkl'.format(window), 'wb') as f:
+        pkl.dump((np.array(trends_test), np.array(residuals_test), y_test), f)

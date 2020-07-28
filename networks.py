@@ -68,8 +68,10 @@ def bidirectional_ae_3_layer(hparams, metrics):
 
 def convolutional_ae_2_layer(hparams, metrics):
     inp = tf.keras.layers.Input(shape=(hparams['input_seq_length'], 1))
-    x = tf.keras.layers.Conv1D(64, kernel_size=(3,), activation='relu', padding='same')(inp)
-    x = tf.keras.layers.Conv1D(16, kernel_size=(3,), activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(inp)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
     x = tf.keras.layers.Flatten()(x)
     x = tf.keras.layers.Dense(hparams['bottleneck_size'])(x)
     if hparams['bottleneck_activation'] == 'relu':
@@ -78,8 +80,10 @@ def convolutional_ae_2_layer(hparams, metrics):
         x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dense(16 * 2 * hparams['output_seq_length'])(x)
     x = tf.keras.layers.Reshape((hparams['output_seq_length'], 16 * 2))(x)
-    x = tf.keras.layers.Conv1D(16, kernel_size=(3,), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(64, kernel_size=(3,),activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
     out = tf.keras.layers.Dense(1)(x)
 
     model = tf.keras.models.Model(inp, out)
@@ -91,9 +95,12 @@ def convolutional_ae_2_layer(hparams, metrics):
 
 def convolutional_ae_3_layer(hparams, metrics):
     inp = tf.keras.layers.Input(shape=(hparams['input_seq_length'], 1))
-    x = tf.keras.layers.Conv1D(128, kernel_size=(3,), activation='relu', padding='same')(inp)
-    x = tf.keras.layers.Conv1D(64, kernel_size=(3,), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(16, kernel_size=(3,), activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(128, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(inp)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
     x = tf.keras.layers.Flatten()(x)
     x = tf.keras.layers.Dense(hparams['bottleneck_size'])(x)
     if hparams['bottleneck_activation'] == 'relu':
@@ -102,9 +109,12 @@ def convolutional_ae_3_layer(hparams, metrics):
         x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dense(16 * 2 * hparams['output_seq_length'])(x)
     x = tf.keras.layers.Reshape((hparams['output_seq_length'], 16 * 2))(x)
-    x = tf.keras.layers.Conv1D(16, kernel_size=(3,), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(64, kernel_size=(3,),activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(128, kernel_size=(3,),activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(128, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
     out = tf.keras.layers.Dense(1)(x)
 
     model = tf.keras.models.Model(inp, out)
@@ -116,10 +126,14 @@ def convolutional_ae_3_layer(hparams, metrics):
 
 def convolutional_ae_4_layer(hparams, metrics):
     inp = tf.keras.layers.Input(shape=(hparams['input_seq_length'], 1))
-    x = tf.keras.layers.Conv1D(256, kernel_size=(3,), activation='relu', padding='same')(inp)
-    x = tf.keras.layers.Conv1D(128, kernel_size=(3,), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(64, kernel_size=(3,), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(16, kernel_size=(3,), activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(256, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(inp)
+    x = tf.keras.layers.Conv1D(128, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(x)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(x)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(x)
     x = tf.keras.layers.Flatten()(x)
     x = tf.keras.layers.Dense(hparams['bottleneck_size'])(x)
     if hparams['bottleneck_activation'] == 'relu':
@@ -128,10 +142,53 @@ def convolutional_ae_4_layer(hparams, metrics):
         x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dense(16 * 2 * hparams['output_seq_length'])(x)
     x = tf.keras.layers.Reshape((hparams['output_seq_length'], 16 * 2))(x)
-    x = tf.keras.layers.Conv1D(16, kernel_size=(3,), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(64, kernel_size=(3,),activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(128, kernel_size=(3,),activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(256, kernel_size=(3,),activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(x)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(x)
+    x = tf.keras.layers.Conv1D(128, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(x)
+    x = tf.keras.layers.Conv1D(256, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same', use_bias=False)(x)
+    out = tf.keras.layers.Dense(1)(x)
+
+    model = tf.keras.models.Model(inp, out)
+
+    model.compile(loss=hparams['loss_function'], optimizer='adam', metrics=metrics)
+
+    return model
+
+
+def convolutional_ae_5_layer(hparams, metrics):
+    inp = tf.keras.layers.Input(shape=(hparams['input_seq_length'], 1))
+    x = tf.keras.layers.Conv1D(512, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(inp)
+    x = tf.keras.layers.Conv1D(256, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(128, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.layers.Dense(hparams['bottleneck_size'])(x)
+    if hparams['bottleneck_activation'] == 'relu':
+        x = tf.keras.layers.ReLU()(x)
+    elif hparams['bottleneck_activation'] == 'leaky':
+        x = tf.keras.layers.LeakyReLU()(x)
+    x = tf.keras.layers.Dense(16 * 2 * hparams['output_seq_length'])(x)
+    x = tf.keras.layers.Reshape((hparams['output_seq_length'], 16 * 2))(x)
+    x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(64, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(128, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(256, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
+    x = tf.keras.layers.Conv1D(512, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
+                               padding='same')(x)
     out = tf.keras.layers.Dense(1)(x)
 
     model = tf.keras.models.Model(inp, out)

@@ -41,11 +41,11 @@ def filter_tracked(candidate_names, tracked_dict):
         difference = set(untracked_families).difference([f[0] for f in filtered])
         if difference:
             print('Number of errors found in untracked models:', len(difference))
-            print('{:^60} --> {:^10} {:^10}'.format('family name', 'expected', 'actual'))
+            print('{:^140} --> {:^10} {:^10}'.format('family name', 'expected', 'actual'))
         for d in difference:
             expected = untracked_nums[untracked_families.index(d)]
             s = sum([(Path(str(d) + '__' + str(n)) / 'best_weights.h5').exists() for n in range(expected)])
-            print('{:>60} --> {:>10} {:>10}'.format(str(d), expected, s))
+            print('{:>140} --> {:^10} {:^10}'.format(str(d), expected, s))
 
     if filtered:
         untracked_families, untracked_nums = zip(*filtered)

@@ -56,6 +56,6 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
         if not logs:
             logs = {}
         epochs_per_cycle = np.floor(self.epochs / self.cycles)
-        if epoch != 0 and (epoch + 1) % epochs_per_cycle == 0:
+        if (epoch + 1) % epochs_per_cycle == 0:
             run_name = self.family_name + '__{}/best_weights.h5'.format(int((epoch) / epochs_per_cycle))
             self.model.save(run_name)

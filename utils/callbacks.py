@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import tensorflow as tf
 
 
@@ -32,10 +33,12 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
     Cosine annealing: https://arxiv.org/pdf/1608.03983.pdf
     """
 
-    def __init__(self, family_name, n_epochs=30, n_cycles=30, max_lr=0.001):
+    def __init__(self, family_name, n_cycles=10, n_epochs=None, warmup=0, max_lr=0.001, weight_offset=0):
         super().__init__()
-        self.epochs = n_epochs
         self.cycles = n_cycles
+        self.warmup = warmup
+        self.offset = (n_cycles - warmup) * weight_offset
+        self.epochs = n_epochs if n_epochs else n_cycles
         self.max_lr = max_lr
         self.lrs = []
         self.family_name = family_name
@@ -56,6 +59,8 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
         if not logs:
             logs = {}
         epochs_per_cycle = np.floor(self.epochs / self.cycles)
-        if (epoch + 1) % epochs_per_cycle == 0:
-            run_name = self.family_name + '__{}/best_weights.h5'.format(int((epoch) / epochs_per_cycle))
+        if (epoch + 1) % epochs_per_cycle == 0 and epoch + 1 > self.warmup:
+            run_name = self.family_name + '__{}/best_weights.h5'.format(int(epoch / epochs_per_cycle + self.offset))
+            if not os.path.isdir(run_name):
+                os.makedirs(run_name)
             self.model.save(run_name)

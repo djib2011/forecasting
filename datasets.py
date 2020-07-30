@@ -4,8 +4,24 @@ import pickle as pkl
 import argparse
 
 
-def seq2seq_generator(data_path, batch_size=256, overlap=6, shuffle=True, augmentation=0, debug=False):
+def seq2seq_generator(data_path: str, batch_size: int = 256, overlap: int = 6, shuffle: bool = True,
+                      augmentation: float = 0, debug: bool = False) -> tf.data.Dataset:
+    """
+    Factory for building TensorFlow data generators for loading time series data.
 
+    Also supports data augmentation and loading series with overlap for backcast.
+
+    :param data_path: Path of a pickle file that contains two arrays: insample and outsample
+    :param batch_size: The batch size
+    :param overlap: The length with which x and y will overlap (i.e. if len(insample) == 12 and len(outsample) == 6 and
+                    overlap == 5, then len(x) == 12 and len(y) == 11). This is done so that the model is trained for
+                    also for backcast.
+    :param shuffle: True/False whether or not the data will be shuffled.
+    :param augmentation: The percentage of the batch that will be augmented data. E.g. if augmentation == 0.75 and
+                         batch_size == 200, then each batch will consist of 50 real series and 150 fake ones.
+    :param debug: True/False whether or not to print information about the batches.
+    :return: A TensorFlow data generator.
+    """
     aug_batch_size = int(batch_size * augmentation)
     real_batch_size = int(batch_size * (1 - augmentation))
 

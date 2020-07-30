@@ -66,7 +66,7 @@ augmentation = hp.HParam('direction', hp.Discrete([args.aug]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([700]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['conv3']))
+direction = hp.HParam('direction', hp.Discrete(['conv4']))
 kernel_size = hp.HParam('kernel_size', hp.Discrete([2, 3, 4, 5, 6]))
 stride = hp.HParam('stride', hp.Discrete([1]))
 
@@ -86,22 +86,20 @@ if overlap:
 
 
 # write model training/testing function
-def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=256, logs=True):
+def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=256, logs=True, num_run=0):
     model = model_generator(hparams, metric_functions)
+    cycles = 10
+    warmup = 2
 
     if args.no_snapshot:
         if not os.path.isdir('results/' + str(run_name)):
             os.makedirs('results/' + str(run_name))
-    else:
-        for i in range(30):
-            if not os.path.isdir('results/' + str(run_name) + '__{}'.format(i)):
-                os.makedirs('results/' + str(run_name) + '__{}'.format(i))
-
-    if args.no_snapshot:
         callbacks = [tf.keras.callbacks.ModelCheckpoint('results/' + str(run_name) + '/best_weights.h5',
                                                         save_best_only=True)]
     else:
-        callbacks = [utils.callbacks.SnapshotEnsemble('results/' + str(run_name), epochs, 30)]
+        epochs = cycles
+        callbacks = [utils.callbacks.SnapshotEnsemble('results/' + str(run_name), n_cycles=cycles,
+                                                      warmup=warmup, weight_offset=num_run)]
 
     if logs:
         callbacks.extend([tf.keras.callbacks.TensorBoard('logs'), hp.KerasCallback('logs', hparams)])
@@ -112,10 +110,10 @@ def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=2
     return model.evaluate(test_set, steps=len(test_set)//batch_size+1)
 
 
-def run(run_name, model_generator, hparams, epochs=10, batch_size=512, logs=True):
+def run(run_name, model_generator, hparams, epochs=10, batch_size=512, logs=True, num_run=0):
     with tf.summary.create_file_writer('logs/tuning/' + str(run_name)).as_default():
         hp.hparams(hparams)
-        results = train_test_model(model_generator, hparams, run_name, epochs, batch_size, logs=logs)
+        results = train_test_model(model_generator, hparams, run_name, epochs, batch_size, logs=logs, num_run=num_run)
         for name, value in zip(metric_names, results[1:]):
             tf.summary.scalar(name, value, step=epochs)
 
@@ -186,18 +184,19 @@ def hyperparam_loop_no_cnn(logs=True, line=False, epochs=5, batch_size=256):
                                     family_name = 'inp_{}__out_{}__aug_{}__loss_{}__bksize_{}__bkact_{}__dir_{}'.format(inp_seq, out_seq, aug, loss,
                                                                                                                           bneck_size, bneck_activation,
                                                                                                                           direct)
-                                    print('-' * 30)
-                                    print('Starting trial: {}'.format(family_name))
-                                    print(hparams)
-                                    if args.debug:
-                                        model = model_mapping[direct](hparams, metric_functions)
-                                        x, y = next(iter(train_set))
-                                        print('Batch shape', x.shape, y.shape)
-                                        model.train_on_batch(x, y)
-                                        continue
+                                    for num_run in range(4):
+                                        print('-' * 30)
+                                        print('Starting trial: {}  (run {})'.format(family_name, num_run))
+                                        print(hparams)
+                                        if args.debug:
+                                            model = model_mapping[direct](hparams, metric_functions)
+                                            x, y = next(iter(train_set))
+                                            print('Batch shape', x.shape, y.shape)
+                                            model.train_on_batch(x, y)
+                                            continue
 
-                                    run(family_name, model_generator=model_mapping[direct],
-                                        hparams=hparams, epochs=epochs, batch_size=batch_size)
+                                        run(family_name, model_generator=model_mapping[direct],
+                                            hparams=hparams, epochs=10, batch_size=batch_size, num_run=num_run)
 
 
 def hyperparam_loop_cnn(logs=True, line=False, epochs=5, batch_size=2):
@@ -244,19 +243,19 @@ def hyperparam_loop_cnn(logs=True, line=False, epochs=5, batch_size=2):
                                                            'ksize_{}__stride_{}'.format(inp_seq, out_seq, aug, loss,
                                                                                         bneck_size, bneck_activation,
                                                                                         direct, ksize, st)
+                                            for num_run in range(4):
+                                                print('-' * 30)
+                                                print('Starting trial: {}  (run {})'.format(family_name, num_run))
+                                                print(hparams)
+                                                if args.debug:
+                                                    model = model_mapping[direct](hparams, metric_functions)
+                                                    x, y = next(iter(train_set))
+                                                    print('Batch shape', x.shape, y.shape)
+                                                    model.train_on_batch(x, y)
+                                                    continue
 
-                                            print('-' * 30)
-                                            print('Starting trial: {}'.format(family_name))
-                                            print(hparams)
-                                            if args.debug:
-                                                model = model_mapping[direct](hparams, metric_functions)
-                                                x, y = next(iter(train_set))
-                                                print('Batch shape', x.shape, y.shape)
-                                                model.train_on_batch(x, y)
-                                                continue
-
-                                            run(family_name, model_generator=model_mapping[direct],
-                                                hparams=hparams, epochs=30, batch_size=batch_size)
+                                                run(family_name, model_generator=model_mapping[direct],
+                                                    hparams=hparams, epochs=10, batch_size=batch_size, num_run=num_run)
 
 
 hyperparam_loop = hyperparam_loop_cnn if kernel_size.domain.values or stride.domain.values else hyperparam_loop_no_cnn

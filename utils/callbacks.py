@@ -74,7 +74,7 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
     Cosine annealing: https://arxiv.org/pdf/1608.03983.pdf
     """
 
-    def __init__(self, family_name, steps_per_epoch, n_cycles=10, max_epochs=None, cold_start_id=0, debug=False):
+    def __init__(self, family_name, steps_per_epoch, n_cycles=10, max_epochs=None, cold_start_id=0):
 
         super().__init__()
         self.cycles = n_cycles
@@ -167,6 +167,57 @@ class MetricMonitor:
         return bool(self.no_significant_change())
 
 
+class SnapshotWithAveraging(SnapshotEnsemble):
+
+    def __init__(self, *args, steps_to_average=20, **kwargs):
+        """
+        Callback that takes model snapshots of weight averages for ensembling.
+
+        Snapshot ensembles: https://arxiv.org/pdf/1704.00109.pdf
+        Cosine annealing: https://arxiv.org/pdf/1608.03983.pdf
+        SGDA: https://arxiv.org/pdf/1803.05407.pdf
+
+        :param steps_to_average: How long is the averaging window
+        """
+        super(SnapshotWithAveraging, self).__init__(*args, **kwargs)
+        self.n_average = steps_to_average
+        self.average_weights = None
+
+    def add_to_average(self):
+        if not self.average_weights:
+            self.average_weights = [w / self.n_average for w in self.model.get_weights()]
+        else:
+            self.average_weights = [m + w / self.n_average for m, w in zip(self.average_weights,
+                                                                           self.model.get_weights())]
+
+    def flush_average(self):
+        if self.average_weights:
+            self.model.set_weights(self.average_weights)
+            self.average_weights = None
+
+    def on_train_batch_end(self, batch, logs=None):
+
+        if batch >= self.n_iterations - self.n_average:
+            self.add_to_average()
+
+        super(SnapshotWithAveraging, self).on_train_batch_end(batch, logs)
+
+    def on_epoch_end(self, epoch, logs=None):
+        curr_weights = self.model.get_weights()
+        self.model.set_weights(self.average_weights)
+        super(SnapshotWithAveraging, self).on_epoch_end(epoch, logs)
+        self.average_weights = curr_weights
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.flush_average()
+
+    @staticmethod
+    def compute_statistic(weights):
+        if not weights:
+            return np.nan
+        return np.sum([w.sum() for w in weights])
+
+
 if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
@@ -190,8 +241,8 @@ if __name__ == '__main__':
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     epochs = 5
-    callbacks = [SnapshotEnsemble('/tmp/snapshot_test/snap', steps_per_epoch=len(x_train)//256+1,
-                                  max_epochs=epochs, n_cycles=3)]
+    callbacks = [SnapshotWithAveraging('/tmp/snapshot_test/snap', steps_per_epoch=len(x_train)//256+1,
+                                       max_epochs=epochs, n_cycles=3)]
 
     h = model.fit(x_train, y_train, batch_size=256, epochs=epochs, validation_data=(x_test, y_test), callbacks=callbacks)
 

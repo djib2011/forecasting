@@ -172,7 +172,7 @@ class MetricMonitor:
 
 class SnapshotWithAveraging(SnapshotEnsemble):
 
-    def __init__(self, *args, steps_to_average=20, **kwargs):
+    def __init__(self, *args, steps_to_average=100, **kwargs):
         """
         Callback that takes model snapshots of weight averages for ensembling.
 

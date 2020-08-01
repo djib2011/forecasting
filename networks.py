@@ -1,5 +1,6 @@
 import tensorflow as tf
-
+import tensorflow_addons as tfa
+import utils
 
 def unidirectional_ae_2_layer(hparams, metrics):
     inp = tf.keras.layers.Input(shape=(hparams['input_seq_length'], 1))
@@ -140,6 +141,8 @@ def convolutional_ae_4_layer(hparams, metrics):
         x = tf.keras.layers.ReLU()(x)
     elif hparams['bottleneck_activation'] == 'leaky':
         x = tf.keras.layers.LeakyReLU()(x)
+    elif hparams['bottleneck_activation'] == 'gelu':
+        x = tfa.layers.GELU()(x)
     x = tf.keras.layers.Dense(16 * 2 * hparams['output_seq_length'])(x)
     x = tf.keras.layers.Reshape((hparams['output_seq_length'], 16 * 2))(x)
     x = tf.keras.layers.Conv1D(16, kernel_size=(hparams['kernel_size'],), strides=hparams['stride'], activation='relu',
@@ -154,7 +157,18 @@ def convolutional_ae_4_layer(hparams, metrics):
 
     model = tf.keras.models.Model(inp, out)
 
-    model.compile(loss=hparams['loss_function'], optimizer='adam', metrics=metrics)
+    if hparams['optimizer'] == 'adam':
+        opt = tf.keras.optimizers.Adam(learning_rate=hparams['learning_rate'])
+    elif hparams['optimizer'] == 'sgd':
+        opt = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'])
+    elif hparams['optimizer'] == 'adamlip':
+        opt = utils.optimizers.BLadam_v2(learning_rate=hparams['learning_rate'])
+    elif hparams['optimizer'] == 'adalip':
+        opt = utils.optimizers.BLsgd_v2(learning_rate=hparams['learning_rate'])
+    else:
+        raise ValueError('Invalid value for "optimizer".')
+
+    model.compile(loss=hparams['loss_function'], optimizer=opt, metrics=metrics)
 
     return model
 

@@ -74,7 +74,7 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
     Cosine annealing: https://arxiv.org/pdf/1608.03983.pdf
     """
 
-    def __init__(self, family_name, steps_per_epoch, n_cycles=10, max_epochs=None, cold_start_id=0):
+    def __init__(self, family_name, n_cycles=10, max_epochs=None, cold_start_id=0):
 
         super().__init__()
         self.cycles = n_cycles
@@ -84,7 +84,7 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
         self.max_lr = None
         self.lrs = []
         self.family_name = family_name
-        self.n_iterations = steps_per_epoch
+        self.n_iterations = None
         self.curr_cycle = 0
         self.stagnant = MetricMonitor(steps=100)
         self.in_warmup = True
@@ -100,7 +100,10 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
             self.in_warmup = False
 
     def on_train_batch_end(self, batch, logs=None):
+
         if self.in_warmup:
+            if not self.n_iterations:
+                self.n_iterations = self.model.history.params['steps']
             if not self.max_lr:
                 self.max_lr = self.model.optimizer.learning_rate.numpy()
             self.warmup_phase(logs)
@@ -197,10 +200,11 @@ class SnapshotWithAveraging(SnapshotEnsemble):
 
     def on_train_batch_end(self, batch, logs=None):
 
+        super(SnapshotWithAveraging, self).on_train_batch_end(batch, logs)
+
         if batch >= self.n_iterations - self.n_average:
             self.add_to_average()
 
-        super(SnapshotWithAveraging, self).on_train_batch_end(batch, logs)
 
     def on_epoch_end(self, epoch, logs=None):
         curr_weights = self.model.get_weights()
@@ -241,8 +245,7 @@ if __name__ == '__main__':
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     epochs = 5
-    callbacks = [SnapshotWithAveraging('/tmp/snapshot_test/snap', steps_per_epoch=len(x_train)//256+1,
-                                       max_epochs=epochs, n_cycles=3)]
+    callbacks = [SnapshotWithAveraging('/tmp/snapshot_test/snap', max_epochs=epochs, n_cycles=3)]
 
     h = model.fit(x_train, y_train, batch_size=256, epochs=epochs, validation_data=(x_test, y_test), callbacks=callbacks)
 

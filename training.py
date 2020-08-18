@@ -215,11 +215,11 @@ def hyperparam_loop_new(cycles=15, cold_restarts=4, batch_size=256):
                                                                           'snapshot ensembling.')
                                             else:
                                                 family_name = 'inp_{}__out_{}__aug_{}__loss_{}__bksize_{}__bkact_{}__' \
-                                                              'dir_{}__ksize_{}__opt_{}__lr_{}__'.format(inp_seq, out_seq,
-                                                                                                         aug, loss, bneck_size,
-                                                                                                         bneck_activation,
-                                                                                                         direct, ksize, opt,
-                                                                                                         lr)
+                                                              'dir_{}__ksize_{}__opt_{}__lr_{}'.format(inp_seq, out_seq,
+                                                                                                       aug, loss, bneck_size,
+                                                                                                       bneck_activation,
+                                                                                                       direct, ksize, opt,
+                                                                                                       lr)
                                                 for num_run in range(cold_restarts):
                                                     print('-' * 30)
                                                     print('Starting trial: {}  (run {})'.format(family_name, num_run))

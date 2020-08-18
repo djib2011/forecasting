@@ -54,6 +54,18 @@ def filter_tracked(candidate_names, tracked_dict):
         return [], []
 
 
+def split_conv(families, num_models):
+    no_conv_families, no_conv_models, conv_families, conv_models = [], [], [], []
+    for f, n in zip(families, num_models):
+        if 'opt' in f:
+            conv_families.append(f)
+            conv_models.append(n)
+        else:
+            no_conv_families.append(f)
+            no_conv_models.append(n)
+    return no_conv_families, no_conv_models, conv_families, conv_models
+
+
 def get_last_N(series, N=18):
     ser_N = series.dropna().iloc[-N:].values
     if len(ser_N) < N:
@@ -87,6 +99,7 @@ def create_results_df(results, ensemble=False):
     new_keys = [k for k in results['smape'].keys() if not k.isdigit()]
     columns = ['input_len', 'output_len', 'aug', 'loss', 'bottleneck_size',
                'bottleneck_activation', 'model_type', 'num']
+
     if ensemble:
         columns.pop()
 
@@ -103,6 +116,36 @@ def create_results_df(results, ensemble=False):
     for column in ('input_len', 'output_len', 'aug', 'loss',
                    'bottleneck_size', 'bottleneck_activation',
                    'model_type'):
+        df[column] = df[column].apply(lambda x: x.split('_')[1])
+
+    df['line'] = lines
+
+    df['smape'] = [results['smape'][k] if results['smape'][k] else np.nan for k in new_keys]
+    df['mase*'] = [results['mase'][k] if results['mase'][k] else np.nan for k in new_keys]
+    return df
+
+
+def create_results_df_conv(results, ensemble=False):
+    new_keys = [k for k in results['smape'].keys() if not k.isdigit()]
+    columns = ['input_len', 'output_len', 'aug', 'loss', 'bottleneck_size',
+               'bottleneck_activation', 'model_type', 'kernel_size', 'optimizer',
+               'learning_rate', 'num']
+
+    if ensemble:
+        columns.pop()
+
+    lines = []
+    for k in new_keys:
+        if 'line' in k:
+            lines.append(True)
+        else:
+            lines.append(False)
+
+    df = pd.DataFrame([k.replace('line__', '').split('__') for k in new_keys],
+                      columns=columns)
+
+    for column in ('input_len', 'output_len', 'aug', 'loss', 'bottleneck_size', 'bottleneck_activation',
+                   'model_type', 'kernel_size', 'optimizer', 'learning_rate', 'num'):
         df[column] = df[column].apply(lambda x: x.split('_')[1])
 
     df['line'] = lines
@@ -201,13 +244,34 @@ def run(num_inputs, families, num_models, train_set, test_set, df):
     return df
 
 
+def run_conv(num_inputs, families, num_models, train_set, test_set, df):
+    for inp in num_inputs:
+        X_test = np.array([get_last_N(ser[1], N=int(inp)) for ser in train_set.iterrows()])
+        y_test = test_set.values
+
+        curr_family_list = [(f, m) for f, m in zip(families, num_models)
+                            if f.name.replace('line__', '')[4:6] == inp]
+
+        results = evaluate_model_ensembles(curr_family_list, X_test, y_test)
+
+        if isinstance(df, pd.DataFrame):
+            df = pd.concat([df, create_results_df_conv(results)])
+        else:
+            df = create_results_df_conv(results)
+
+    return df
+
+
 if __name__ == '__main__':
     target_dir = Path('reports')
 
     df = None
+    df_conv = None
 
     if (target_dir / 'result_df.csv').exists():
         df = pd.read_csv(str(target_dir / 'result_df.csv'))
+    if (target_dir / 'result_df_conv.csv').exists():
+        df_conv = pd.read_csv(str(target_dir / 'result_df_conv.csv'))
 
     # Parse command line arguments
     parser = argparse.ArgumentParser()
@@ -244,8 +308,6 @@ if __name__ == '__main__':
 
     families, num_models = filter_tracked(trials, tracked)
 
-    num_inputs = np.unique([f.name.replace('line__', '')[4:6] for f in families if not f.name.isdigit()])
-
     if args.debug:
         print('Individual tracked trials:    ', sum(tracked.values()))
         print('Tracked trial families:       ', len(tracked))
@@ -257,11 +319,20 @@ if __name__ == '__main__':
             print('{:>3} @ {}'.format(m, f))
 
     else:
+
+        families, num_models, families_conv, num_models_conv = split_conv(families, num_models)
+
+        num_inputs = np.unique([f.name.replace('line__', '')[4:6] for f in families if not f.name.isdigit()])
+        num_inputs_conv = np.unique([f.name.replace('line__', '')[4:6] for f in families_conv if not f.name.isdigit()])
+
         df = run(num_inputs, families, num_models, train, test, df)
+        df_conv = run_conv(num_inputs_conv, families_conv, num_models_conv, train, test, df_conv)
 
         df.to_csv(str(target_dir / 'result_df.csv'), index=False)
+        df_conv.to_csv(str(target_dir / 'result_df_conv.csv'), index=False)
 
         tracked.update(dict(zip(families, num_models)))
+        tracked.update(dict(zip(families_conv, num_models_conv)))
 
         with open(str(target_dir / 'tracked.pkl'), 'wb') as f:
             pkl.dump((tracked), f)

@@ -6,6 +6,7 @@ import pickle as pkl
 import tensorflow as tf
 import argparse
 import os
+import tensorflow_addons as tfa
 
 import metrics
 
@@ -57,7 +58,7 @@ def filter_tracked(candidate_names, tracked_dict):
 def split_conv(families, num_models):
     no_conv_families, no_conv_models, conv_families, conv_models = [], [], [], []
     for f, n in zip(families, num_models):
-        if 'opt' in f:
+        if 'opt' in f.name:
             conv_families.append(f)
             conv_models.append(n)
         else:
@@ -174,7 +175,8 @@ def evaluate_models(trials, x, y):
         model = tf.keras.models.load_model(model_dir, custom_objects={'SMAPE': smape,
                                                                       'MASE_estimate': mase_estimate,
                                                                       'OWA_estimate': owa_estimate,
-                                                                      'reconstruction_loss': reconstruction_loss})
+                                                                      'reconstruction_loss': reconstruction_loss,
+                                                                      'gelu': tfa.layers.GELU})
 
         preds = get_predictions(model, x)
 

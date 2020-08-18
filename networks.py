@@ -354,3 +354,22 @@ def concat_ae_3_layer(hparams, metrics):
     model = tf.keras.models.Model(inp, out)
     model.compile(loss=hparams['loss_function'], optimizer='adam', metrics=metrics)
     return model
+
+
+if __name__ == '__main__':
+
+    hparams = {'bottleneck_size': 700,
+               'bottleneck_activation': 'gelu',
+               'direction': 'conv4',
+               'input_seq_length': 18,
+               'output_seq_length': 14,
+               'loss_function': 'mae',
+               'kernel_size': 3,
+               'optimizer': 'adam',
+               'stride': 1,
+               'learning_rate': 0.01}
+
+    metrics = []
+
+    model = convolutional_ae_4_layer(hparams, metrics)
+    model.summary()

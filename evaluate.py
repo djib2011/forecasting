@@ -146,7 +146,7 @@ def create_results_df_conv(results, ensemble=False):
                       columns=columns)
 
     for column in ('input_len', 'output_len', 'aug', 'loss', 'bottleneck_size', 'bottleneck_activation',
-                   'model_type', 'kernel_size', 'optimizer', 'learning_rate', 'num'):
+                   'model_type', 'kernel_size', 'optimizer', 'learning_rate'):
         df[column] = df[column].apply(lambda x: x.split('_')[1])
 
     df['line'] = lines

@@ -69,7 +69,7 @@ loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
 direction = hp.HParam('direction', hp.Discrete(['conv3']))
 kernel_size = hp.HParam('kernel_size', hp.Discrete([2, 3, 4, 5, 6]))
 optimizer = hp.HParam('optimizer', hp.Discrete(['sgd']))
-learning_rate = hp.HParam('learning_rate', hp.Discrete([1, 0.5, 0.1, 0.05, 0.01]))
+learning_rate = hp.HParam('learning_rate', hp.Discrete([1., 0.5, 0.1, 0.05, 0.01]))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
@@ -100,7 +100,7 @@ def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=2
         epochs = cycles + 5
         callbacks = [utils.callbacks.SnapshotWithAveraging('results/' + str(run_name), n_cycles=cycles,
                                                            max_epochs=epochs, steps_to_average=100,
-                                                           cold_start_id=num_run)]
+                                                           min_warmup_epochs=1, cold_start_id=num_run)]
 
     if logs:
         callbacks.extend([tf.keras.callbacks.TensorBoard('logs'), hp.KerasCallback('logs', hparams)])

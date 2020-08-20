@@ -100,7 +100,7 @@ def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=2
         epochs = cycles + 5
         callbacks = [utils.callbacks.SnapshotWithAveraging('results/' + str(run_name), n_cycles=cycles,
                                                            max_epochs=epochs, steps_to_average=100,
-                                                           cold_start_id=num_run)]
+                                                           min_warmup_epochs=1, cold_start_id=num_run)]
 
     if logs:
         callbacks.extend([tf.keras.callbacks.TensorBoard('logs'), hp.KerasCallback('logs', hparams)])

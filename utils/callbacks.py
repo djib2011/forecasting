@@ -74,12 +74,13 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
     Cosine annealing: https://arxiv.org/pdf/1608.03983.pdf
     """
 
-    def __init__(self, family_name, n_cycles=10, max_epochs=None, cold_start_id=0):
+    def __init__(self, family_name, n_cycles=10, max_epochs=None, cold_start_id=0, min_warmup_epochs=0):
 
         super().__init__()
         self.cycles = n_cycles
         self.offset = n_cycles * cold_start_id
         self.epochs = max_epochs
+        self.min_warmup_epochs = min_warmup_epochs
         self.max_warmup = max_epochs - n_cycles
         self.max_lr = None
         self.lrs = []
@@ -100,7 +101,6 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
             self.in_warmup = False
 
     def on_train_batch_end(self, batch, logs=None):
-
         if self.in_warmup:
             if not self.n_iterations:
                 self.n_iterations = self.model.history.params['steps']
@@ -118,13 +118,14 @@ class SnapshotEnsemble(tf.keras.callbacks.Callback):
             if epoch > self.max_warmup:
                 self.in_warmup = False
         else:
-            run_dir = self.family_name + '__{}'.format(self.curr_cycle + self.offset)
-            if not os.path.isdir(run_dir):
-                os.makedirs(run_dir)
-            self.model.save(run_dir + '/best_weights.h5')
-            self.curr_cycle += 1
-            if self.curr_cycle >= self.cycles:
-                self.model.stop_training = True
+            if epoch > self.min_warmup_epochs:
+                run_dir = self.family_name + '__{}'.format(self.curr_cycle + self.offset)
+                if not os.path.isdir(run_dir):
+                    os.makedirs(run_dir)
+                self.model.save(run_dir + '/best_weights.h5')
+                self.curr_cycle += 1
+                if self.curr_cycle >= self.cycles:
+                    self.model.stop_training = True
 
 
 class MetricMonitor:
@@ -204,7 +205,6 @@ class SnapshotWithAveraging(SnapshotEnsemble):
 
         if batch >= self.n_iterations - self.n_average:
             self.add_to_average()
-
 
     def on_epoch_end(self, epoch, logs=None):
         curr_weights = self.model.get_weights()

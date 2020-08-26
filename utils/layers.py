@@ -6,6 +6,22 @@ import utils
 class EncoderBlock(tf.keras.layers.Layer):
 
     def __init__(self, layer_type='conv', num_layers=3, kernel_size=5):
+        """
+        Sequence-to-sequence encoder block.
+
+        'layer_type' determines what type of a sequential model we'll have, while 'num_layers' determines how deep the
+        model will be. For example if layer_type='conv' and num_layers=3, then the encoder would be equivalent to:
+
+        ```python
+        x = tf.keras.layers.Conv1D(128)(x)
+        x = tf.keras.layers.Conv1D(64)(x)
+        x = tf.keras.layers.Conv1D(32)(x)
+        ```
+
+        :param layer_type: The type of the layers. Three options are available: 'conv', 'lstm' and 'bi'.
+        :param num_layers: The number of layers in the encoder.
+        :param kernel_size: The kernel size of convolutional layers. Only relevant if layer_type='conv'
+        """
 
         super(EncoderBlock, self).__init__()
 
@@ -20,7 +36,7 @@ class EncoderBlock(tf.keras.layers.Layer):
         else:
             raise ValueError()
 
-        sizes = [512, 256, 128, 64, 32, 16]
+        sizes = [512, 256, 128, 64, 32]
         sizes = sizes[-num_layers:]
 
         self._layers_builder = [base_layer(sizes[i]) for i in range(num_layers)]
@@ -36,6 +52,22 @@ class EncoderBlock(tf.keras.layers.Layer):
 
 class DecoderBlock(tf.keras.layers.Layer):
     def __init__(self, layer_type='conv', num_layers=3, kernel_size=5):
+        """
+        Sequence-to-sequence decoder block.
+
+        'layer_type' determines what type of a sequential model we'll have, while 'num_layers' determines how deep the
+        model will be. For example if layer_type='conv' and num_layers=3, then the encoder would be equivalent to:
+
+        ```python
+        x = tf.keras.layers.Conv1D(32)(x)
+        x = tf.keras.layers.Conv1D(64)(x)
+        x = tf.keras.layers.Conv1D(128)(x)
+        ```
+
+        :param layer_type: The type of the layers. Three options are available: 'conv', 'lstm' and 'bi'.
+        :param num_layers: The number of layers in the encoder.
+        :param kernel_size: The kernel size of convolutional layers. Only relevant if layer_type='conv'
+        """
 
         super(DecoderBlock, self).__init__()
 
@@ -65,19 +97,40 @@ class DecoderBlock(tf.keras.layers.Layer):
 
 
 class AttentionBottleneck(tf.keras.layers.Layer):
+
     def __init__(self, output_length, bottleneck_size, layer_type='conv', scale=True, kernel_size=5,
                  bottleneck_activation='relu'):
+        """
+        Sequence-to-sequence bottleneck with attention.
+
+        'layer_type' determines what type of a sequential model we'll have, while 'num_layers' determines how deep the
+        model will be. For example if layer_type='conv' and num_layers=3, then the encoder would be equivalent to:
+
+        ```python
+        x = tf.keras.layers.Conv1D(32)(x)
+        x = tf.keras.layers.Conv1D(64)(x)
+        x = tf.keras.layers.Conv1D(128)(x)
+        ```
+
+        :param output_length: The target length of the output sequence.
+        :param bottleneck_size: The size of the FC part of the bottleneck.
+        :param layer_type: The type of the layers. Three options are available: 'conv', 'lstm' and 'bi'.
+        :param scale: Determines whether to use scaled or regular attention.
+        :param kernel_size: The kernel size of convolutional layers. Only relevant if layer_type='conv'
+        :param bottleneck_activation: The activation function of the bottleneck. Options: 'relu', 'leaky' and 'gelu'
+        """
+
 
         super(AttentionBottleneck, self).__init__()
 
         if layer_type == 'conv':
-            base_layer = tf.keras.layers.Conv1D(16, kernel_size=kernel_size, padding='same',
-                                                activation='relu', strides=1)
+            base_layer = lambda: tf.keras.layers.Conv1D(16, kernel_size=kernel_size, padding='same',
+                                                          activation='relu', strides=1)
         elif layer_type == 'lstm':
-            base_layer = tf.keras.layers.LSTM(16, return_sequences=True, activation='relu')
+            base_layer = lambda: tf.keras.layers.LSTM(16, return_sequences=True, activation='relu')
         elif layer_type == 'bi':
-            base_layer = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(16, return_sequences=True,
-                                                                            activation='relu'))
+            base_layer = lambda: tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(16, return_sequences=True,
+                                                                                      activation='relu'))
         else:
             raise ValueError()
 
@@ -96,15 +149,86 @@ class AttentionBottleneck(tf.keras.layers.Layer):
         reshape = tf.keras.layers.Reshape((output_length, 16))
         self.attn = tf.keras.layers.Attention(use_scale=scale)
 
-        self._layers_builder = [flatten, bottleneck1, activation, bottleneck2, reshape, base_layer]
+        self._layers_builder = [base_layer(), flatten, bottleneck1, activation, bottleneck2, reshape, base_layer()]
 
     def __call__(self, x, *args, **kwargs):
 
-        y_ = x
-        for layer in self._layers_builder:
+        value = self._layers_builder[0](x)
+        y_ = value
+
+        for layer in self._layers_builder[1:]:
             y_ = layer(y_)
 
-        query, value = y_, x
+        query = y_
+        y_ = self.attn([query, value])
+
+        return y_
+
+
+class DisjoinedAttentionBottleneck(tf.keras.layers.Layer):
+
+    def __init__(self, output_length, bottleneck_size, layer_type='conv', scale=True, kernel_size=5,
+                 bottleneck_activation='relu'):
+        """
+        Sequence-to-sequence bottleneck with attention.
+
+        'layer_type' determines what type of a sequential model we'll have, while 'num_layers' determines how deep the
+        model will be. For example if layer_type='conv' and num_layers=3, then the encoder would be equivalent to:
+
+        ```python
+        x = tf.keras.layers.Conv1D(32)(x)
+        x = tf.keras.layers.Conv1D(64)(x)
+        x = tf.keras.layers.Conv1D(128)(x)
+        ```
+
+        :param output_length: The target length of the output sequence.
+        :param bottleneck_size: The size of the FC part of the bottleneck.
+        :param layer_type: The type of the layers. Three options are available: 'conv', 'lstm' and 'bi'.
+        :param scale: Determines whether to use scaled or regular attention.
+        :param kernel_size: The kernel size of convolutional layers. Only relevant if layer_type='conv'
+        :param bottleneck_activation: The activation function of the bottleneck. Options: 'relu', 'leaky' and 'gelu'
+        """
+
+
+        super(DisjoinedAttentionBottleneck, self).__init__()
+
+        if layer_type == 'conv':
+            base_layer = lambda: tf.keras.layers.Conv1D(16, kernel_size=kernel_size, padding='same',
+                                                          activation='relu', strides=1)
+        elif layer_type == 'lstm':
+            base_layer = lambda: tf.keras.layers.LSTM(16, return_sequences=True, activation='relu')
+        elif layer_type == 'bi':
+            base_layer = lambda: tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(16, return_sequences=True,
+                                                                                      activation='relu'))
+        else:
+            raise ValueError()
+
+        if bottleneck_activation == 'relu':
+            activation = tf.keras.layers.ReLU()
+        elif bottleneck_activation == 'leaky':
+            activation = tf.keras.layers.LeakyReLU()
+        elif bottleneck_activation == 'gelu':
+            activation = tfa.layers.GELU()
+        else:
+            raise ValueError()
+
+        flatten = tf.keras.layers.Flatten()
+        bottleneck1 = tf.keras.layers.Dense(bottleneck_size)
+        bottleneck2 = tf.keras.layers.Dense(16 * output_length)
+        reshape = tf.keras.layers.Reshape((output_length, 16))
+        self.attn = tf.keras.layers.Attention(use_scale=scale)
+
+        self._layers_builder = [base_layer(), flatten, bottleneck1, activation, bottleneck2, reshape, base_layer()]
+
+    def __call__(self, x, *args, **kwargs):
+
+        value = self._layers_builder[0](x)
+        y_ = value
+
+        for layer in self._layers_builder[1:]:
+            y_ = layer(y_)
+
+        query = y_
         y_ = self.attn([query, value])
 
         return y_

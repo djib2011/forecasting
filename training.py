@@ -66,10 +66,10 @@ augmentation = hp.HParam('direction', hp.Discrete([args.aug]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([700]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['conv4']))
-kernel_size = hp.HParam('kernel_size', hp.Discrete([4, 5, 6]))
+direction = hp.HParam('direction', hp.Discrete(['attn_conv4']))
+kernel_size = hp.HParam('kernel_size', hp.Discrete([5]))
 optimizer = hp.HParam('optimizer', hp.Discrete(['adam']))
-learning_rate = hp.HParam('learning_rate', hp.Discrete([0.005, 0.001, 0.0005]))
+learning_rate = hp.HParam('learning_rate', hp.Discrete([0.001]))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
@@ -125,6 +125,12 @@ model_mapping = {'uni': networks.unidirectional_ae_2_layer, 'fc': networks.fully
                  'conv3': networks.convolutional_ae_4_layer, 'conv4': networks.convolutional_ae_5_layer,
                  'comb': networks.combined_ae_2_layer, 'cat': networks.concat_ae_2_layer,
                  'dual_inp': networks.convolutional_4_layer_2_input}
+
+attn_names = ['attn_conv' + str(i) for i in range(1, 6)] + \
+             ['attn_uni' + str(i) for i in range(1, 6)] + \
+             ['attn_bi' + str(i) for i in range(1, 6)]
+
+model_mapping.update({a: networks.simple_attention for a in attn_names})
 
 with tf.summary.create_file_writer('logs/tuning').as_default():
     h = [input_seq_length, output_seq_length, bottleneck_size, bottleneck_activation, loss_function]
@@ -236,6 +242,7 @@ def hyperparam_loop_new(cycles=15, cold_restarts=4, batch_size=256):
 
 
 if __name__ == '__main__':
+
     max_epochs = 20
     epochs = min(max_epochs, int(5 / (1 - args.aug)))
     real_batch_size = int(batch_size * (1 - args.aug))

@@ -67,7 +67,7 @@ bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([700]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
 direction = hp.HParam('direction', hp.Discrete(['attn_conv4']))
-kernel_size = hp.HParam('kernel_size', hp.Discrete([5]))
+kernel_size = hp.HParam('kernel_size', hp.Discrete([4, 6]))
 optimizer = hp.HParam('optimizer', hp.Discrete(['adam']))
 learning_rate = hp.HParam('learning_rate', hp.Discrete([0.001]))
 

@@ -66,8 +66,8 @@ augmentation = hp.HParam('direction', hp.Discrete([args.aug]))
 bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([700]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['attn_conv4']))
-kernel_size = hp.HParam('kernel_size', hp.Discrete([4, 6]))
+direction = hp.HParam('direction', hp.Discrete(['conv4']))
+kernel_size = hp.HParam('kernel_size', hp.Discrete([5]))
 optimizer = hp.HParam('optimizer', hp.Discrete(['adam']))
 learning_rate = hp.HParam('learning_rate', hp.Discrete([0.001]))
 
@@ -91,14 +91,16 @@ def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=2
     model = model_generator(hparams, metric_functions)
     cycles = 15
 
+    result_dir = 'results/final/'
+
     if args.no_snapshot:
-        if not os.path.isdir('results/' + str(run_name)):
-            os.makedirs('results/' + str(run_name))
-        callbacks = [tf.keras.callbacks.ModelCheckpoint('results/' + str(run_name) + '/best_weights.h5',
+        if not os.path.isdir(result_dir + str(run_name)):
+            os.makedirs(result_dir + str(run_name))
+        callbacks = [tf.keras.callbacks.ModelCheckpoint(result_dir + str(run_name) + '/best_weights.h5',
                                                         save_best_only=True)]
     else:
         epochs = cycles + 5
-        callbacks = [utils.callbacks.SnapshotWithAveraging('results/' + str(run_name), n_cycles=cycles,
+        callbacks = [utils.callbacks.SnapshotWithAveraging(result_dir + str(run_name), n_cycles=cycles,
                                                            max_epochs=epochs, steps_to_average=100,
                                                            min_warmup_epochs=1, cold_start_id=num_run)]
 

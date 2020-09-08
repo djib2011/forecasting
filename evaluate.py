@@ -265,26 +265,29 @@ def run_conv(num_inputs, families, num_models, train_set, test_set, df):
 
 
 if __name__ == '__main__':
-    target_dir = Path('reports')
 
-    df = None
-    df_conv = None
-
-    if (target_dir / 'result_df.csv').exists():
-        df = pd.read_csv(str(target_dir / 'result_df.csv'))
-    if (target_dir / 'result_df_conv.csv').exists():
-        df_conv = pd.read_csv(str(target_dir / 'result_df_conv.csv'))
-
-    # Parse command line arguments
+   # Parse command line arguments
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-f', '--fresh', action='store_true', help='Ignore tracked experiments; Evaluate all models from '
                                                                    'scratch.')
     parser.add_argument('-d', '--debug', action='store_true', help='Print which experiments will be evaluated (i.e. don\'t run actual evaluations.')
+    parser.add_argument('--final', action='store_true', help='Evaluate results in /results/final subdirectory.')
+
     args = parser.parse_args()
+
+    target_dir = Path('reports')
+    if args.final:
+        target_dir /= 'final'
 
     if args.fresh:
         df = None
+        df_conv = None
+    else:
+        if (target_dir / 'result_df.csv').exists():
+            df = pd.read_csv(str(target_dir / 'result_df.csv'))
+        if (target_dir / 'result_df_conv.csv').exists():
+            df_conv = pd.read_csv(str(target_dir / 'result_df_conv.csv'))
 
     np.seterr(all='ignore')
 
@@ -296,7 +299,10 @@ if __name__ == '__main__':
     test = pd.read_csv(test_path).drop('V1', axis=1)
 
     # Read experiments
-    p = Path('results').absolute()
+    if args.final:
+        p = Path('results/final').absolute()
+    else:
+        p = Path('results').absolute()
 
     if (target_dir / 'tracked.pkl').exists() and not args.fresh:
         with open(str(target_dir / 'tracked.pkl'), 'rb') as f:
@@ -304,7 +310,7 @@ if __name__ == '__main__':
     else:
         tracked = {}
 
-    trials = list(p.glob('*'))
+    trials = [f for f in p.glob('*') if not f.is_dir()]
     trials = check_for_errors(trials, fix=False)
     trials = [t for t in trials if 'dual_inp' not in t.name]
 

@@ -280,10 +280,9 @@ if __name__ == '__main__':
     if args.final:
         target_dir /= 'final'
 
-    if args.fresh:
-        df = None
-        df_conv = None
-    else:
+    df = None
+    df_conv = None
+    if not args.fresh:
         if (target_dir / 'result_df.csv').exists():
             df = pd.read_csv(str(target_dir / 'result_df.csv'))
         if (target_dir / 'result_df_conv.csv').exists():
@@ -309,8 +308,8 @@ if __name__ == '__main__':
             tracked = pkl.load(f)
     else:
         tracked = {}
-
-    trials = [f for f in p.glob('*') if not f.is_dir()]
+    
+    trials = [f for f in p.glob('*') if f.name != 'final']
     trials = check_for_errors(trials, fix=False)
     trials = [t for t in trials if 'dual_inp' not in t.name]
 
@@ -336,8 +335,16 @@ if __name__ == '__main__':
         df = run(num_inputs, families, num_models, train, test, df)
         df_conv = run_conv(num_inputs_conv, families_conv, num_models_conv, train, test, df_conv)
 
-        df.to_csv(str(target_dir / 'result_df.csv'), index=False)
-        df_conv.to_csv(str(target_dir / 'result_df_conv.csv'), index=False)
+        if isinstance(df, pd.DataFrame):
+            df.to_csv(str(target_dir / 'result_df.csv'), index=False)
+            print('Wrote:', str(target_dir / 'result_df.csv'))
+        else:
+            print('Wrong type:', df)
+        if isinstance(df_conv, pd.DataFrame):
+            df_conv.to_csv(str(target_dir / 'result_df_conv.csv'), index=False)
+            print('Wrote:', str(target_dir / 'result_df_conv.csv'))
+        else:
+            print('Wrong_type:', df_conv)
 
         tracked.update(dict(zip(families, num_models)))
         tracked.update(dict(zip(families_conv, num_models_conv)))

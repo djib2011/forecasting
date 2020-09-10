@@ -179,6 +179,48 @@ def seq2seq_generator_decomposed(data_path, batch_size=256, overlap=6, shuffle=T
     return data
 
 
+def seq2seq_generator_only_aug(data_path: str, batch_size: int = 256, overlap: int = 6, shuffle: bool = True) -> tf.data.Dataset:
+
+    def augment(x, y):
+        random_ind_1 = tf.random.categorical(tf.math.log([[1.] * batch_size]), batch_size)
+        random_ind_2 = tf.random.categorical(tf.math.log([[1.] * batch_size]), batch_size)
+        random_ind_3 = tf.random.categorical(tf.math.log([[1.] * batch_size]), batch_size)
+        random_ind_4 = tf.random.categorical(tf.math.log([[1.] * batch_size]), batch_size)
+        random_ind_5 = tf.random.categorical(tf.math.log([[1.] * batch_size]), batch_size)
+
+        x_aug = (tf.gather(x, random_ind_1) + tf.gather(x, random_ind_2) + tf.gather(x, random_ind_3)
+                 + tf.gather(x, random_ind_4) + tf.gather(x, random_ind_5)) / 2
+
+        y_aug = (tf.gather(y, random_ind_1) + tf.gather(y, random_ind_2) + tf.gather(y, random_ind_3)
+                 + tf.gather(y, random_ind_4) + tf.gather(y, random_ind_5)) / 2
+
+        return tf.squeeze(x_aug, [0]), tf.squeeze(y_aug, [0])
+
+    # Load data
+    with open(data_path, 'rb') as f:
+        x, y = pkl.load(f)
+
+    # Overlap input with output
+    if overlap:
+        y = np.c_[x[:, -overlap:], y]
+
+    x = x[..., np.newaxis]
+    y = y[..., np.newaxis]
+
+    # Tensorflow dataset
+    data = tf.data.Dataset.from_tensor_slices((x, y))
+    if shuffle:
+        data = data.shuffle(buffer_size=len(x))
+    data = data.repeat()
+    data = data.batch(batch_size=batch_size)
+    data = data.map(augment)
+    data = data.prefetch(buffer_size=1)
+
+    data.__class__ = type(data.__class__.__name__, (data.__class__,), {'__len__': lambda self: len(x)})
+    return data
+
+
+
 if __name__ == '__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser()

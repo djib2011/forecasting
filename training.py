@@ -63,13 +63,13 @@ else:
 input_seq_length = hp.HParam('input_seq_length', hp.Discrete([inp_length]))
 output_seq_length = hp.HParam('output_seq_length', hp.Discrete([out_length]))
 augmentation = hp.HParam('direction', hp.Discrete([args.aug]))
-bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([700]))
+bottleneck_size = hp.HParam('bottleneck_size', hp.Discrete([500, 600, 800]))
 bottleneck_activation = hp.HParam('bottleneck_activation', hp.Discrete(['relu']))
 loss_function = hp.HParam('loss_function', hp.Discrete(['mae']))
-direction = hp.HParam('direction', hp.Discrete(['conv4']))
-kernel_size = hp.HParam('kernel_size', hp.Discrete([5]))
+direction = hp.HParam('direction', hp.Discrete(['attn_conv5']))
+kernel_size = hp.HParam('kernel_size', hp.Discrete([4, 5, 6]))
 optimizer = hp.HParam('optimizer', hp.Discrete(['adam']))
-learning_rate = hp.HParam('learning_rate', hp.Discrete([0.001]))
+learning_rate = hp.HParam('learning_rate', hp.Discrete([0.0005, 0.001, 0.005]))
 
 # define metrics
 reconstruction_loss = metrics.build_reconstruction_loss(overlap=overlap)
@@ -91,7 +91,7 @@ def train_test_model(model_generator, hparams, run_name, epochs=10, batch_size=2
     model = model_generator(hparams, metric_functions)
     cycles = 15
 
-    result_dir = 'results/final/'
+    result_dir = 'results/'
 
     if args.no_snapshot:
         if not os.path.isdir(result_dir + str(run_name)):

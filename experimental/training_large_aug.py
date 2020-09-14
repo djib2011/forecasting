@@ -1,5 +1,9 @@
 import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
+
+import sys
+sys.path.append('/home/thanos/projects/ae_pred/')
+
 import metrics
 import datasets
 import networks
@@ -23,7 +27,7 @@ inp_length = args.input_len
 overlap = args.overlap
 out_length = overlap + 6
 
-batch_size = 256 * 2 * 2 * 2 * 2 * 2
+batch_size = 256 * 2 * 2 * 2 * 2
 
 # load datasets
 train_set = datasets.seq2seq_generator_only_aug('data/yearly_{}_train.pkl'.format(inp_length + 6), overlap=overlap,
@@ -138,4 +142,4 @@ def hyperparam_loop_new(cycles=15, cold_restarts=4, batch_size=256):
 
 if __name__ == '__main__':
 
-    hyperparam_loop_new(cycles=1000, cold_restarts=10, batch_size=batch_size)
+    hyperparam_loop_new(cycles=20000, cold_restarts=100, batch_size=batch_size)

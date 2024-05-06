@@ -75,7 +75,7 @@ terminado==0.8.3
 testpath==0.4.4
 tf-estimator-nightly==1.14.0.dev2019060501
 tornado==6.3.3
-tqdm==4.43.0
+tqdm==4.66.4
 traitlets==4.3.3
 urllib3==1.26.18
 wcwidth==0.1.8
